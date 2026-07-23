@@ -583,7 +583,7 @@ export default function Step5DocumentsUpload() {
                             className="inline-flex items-center gap-1 text-[#185A9D] hover:underline font-medium"
                           >
                             <MdOutlineDownload className="w-4 h-4" />
-                            TradeBlotter AML Due Diligence Questionnaire
+                            Peniwyse AML Due Diligence Questionnaire
                           </a>
                         </p>
                       )}

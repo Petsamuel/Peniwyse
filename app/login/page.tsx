@@ -103,7 +103,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-4 mb-10 group lg:hidden ">
                 <div className="h-auto w-10 shrink-0 overflow-hidden flex items-center justify-center">
                   <Image
-                    src={"/logo-white.png"}
+                    src={"/image.png"}
                     alt="Logo"
                     width={200}
                     height={200}
@@ -111,7 +111,7 @@ export default function LoginPage() {
                   />
                 </div>
                 <span className="text-2xl font-black text-foreground tracking-tighter -ml-4">
-                  TradeBlott<span className="text-[#1596fe] font-black">r</span>
+                  Peniwyse
                 </span>
               </div>
             </>

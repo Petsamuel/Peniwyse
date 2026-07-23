@@ -286,7 +286,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
                             </div>
                             <div className="bg-surface-hover py-4 px-8 border-t border-border-theme">
                                 <p className="text-[10px] text-muted-theme font-bold uppercase tracking-widest text-center">
-                                    TradeBlotter Security Protocol
+                                    Peniwyse Security Protocol
                                 </p>
                             </div>
                         </motion.div>

@@ -23,11 +23,12 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "TradeBlottr",
-  description: "TradeBlottr - Trading Blotter",
+  title: "Peniwyse",
+  description: "Peniwyse - Trading Blotter",
   icons: {
-    icon: "/logo-white.png",
-    shortcut: "/logo-white.png",
+    icon: "/logo2.png",
+    shortcut: "/logo2.png",
+    apple: "/logo2.png",
   },
 };
 

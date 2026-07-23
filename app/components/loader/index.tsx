@@ -8,7 +8,7 @@ const Loader = () => {
       <div className="animate-pulse flex flex-col items-center gap-6">
         <div className="h-auto w-16 overflow-hidden flex items-center justify-center">
           <Image
-            src={"/logo-white.png"}
+            src={"/image.png"}
             alt="Logo"
             width={100}
             height={100}
@@ -17,7 +17,7 @@ const Loader = () => {
         </div>
         <div className="flex flex-col items-center">
           <span className="text-2xl font-black text-foreground tracking-tighter">
-            TradeBlott<span className="text-[#1596fe] font-black">r</span>
+            Peniwyse
           </span>
           <div className="mt-4 flex gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-[#1596fe] animate-bounce [animation-delay:-0.3s]" />

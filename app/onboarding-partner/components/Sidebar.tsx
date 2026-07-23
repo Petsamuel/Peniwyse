@@ -14,19 +14,25 @@ const STEPS = [
 ];
 
 export default function Sidebar() {
-  const { currentStep, completedSteps, registrationData, setCurrentStep } = useOnboardingPartner();
+  const { currentStep, completedSteps, registrationData, setCurrentStep } =
+    useOnboardingPartner();
 
-  const progress = registrationData?.percentComplete ?? Math.round((completedSteps.length / STEPS.length) * 100);
+  const progress =
+    registrationData?.percentComplete ??
+    Math.round((completedSteps.length / STEPS.length) * 100);
 
   const checkIsCompleted = (id: number) => {
     let isCompletedByData = false;
     if (registrationData) {
       if (id === 1) isCompletedByData = registrationData.basicInfoCompleted;
       if (id === 2) isCompletedByData = registrationData.contactInfoCompleted;
-      if (id === 3) isCompletedByData = registrationData.additionalDetailsCompleted;
-      if (id === 4) isCompletedByData = registrationData.beneficialOwnersCompleted;
+      if (id === 3)
+        isCompletedByData = registrationData.additionalDetailsCompleted;
+      if (id === 4)
+        isCompletedByData = registrationData.beneficialOwnersCompleted;
       if (id === 5) isCompletedByData = registrationData.documentsCompleted;
-      if (id === 6) isCompletedByData = registrationData.percentComplete === 100;
+      if (id === 6)
+        isCompletedByData = registrationData.percentComplete === 100;
     }
     return !!isCompletedByData || completedSteps.includes(id);
   };
@@ -40,7 +46,7 @@ export default function Sidebar() {
       <div className="relative z-10 flex items-center gap-4 mb-10 px-2">
         <div className="h-auto w-10 shrink-0 overflow-hidden flex items-center justify-center">
           <Image
-            src="/logo-white.png"
+            src="/logo2.png"
             alt="Logo"
             width={16}
             height={16}
@@ -48,8 +54,7 @@ export default function Sidebar() {
           />
         </div>
         <span className="text-xl font-semibold text-slate-800 tracking-tight -ml-4">
-          TradeBlott
-          <span className="text-accent text-shadow-sm font-bold">r</span>
+          Peniwyse
         </span>
       </div>
 
@@ -71,14 +76,16 @@ export default function Sidebar() {
                 />
               )}
 
-              <button 
+              <button
                 onClick={() => {
                   if (isCompleted || isActive) {
                     setCurrentStep(step.id);
                   }
                 }}
                 className={`flex items-start gap-4 text-left ${
-                  isCompleted || isActive ? 'cursor-pointer hover:opacity-80 transition-opacity' : 'cursor-not-allowed opacity-60'
+                  isCompleted || isActive
+                    ? "cursor-pointer hover:opacity-80 transition-opacity"
+                    : "cursor-not-allowed opacity-60"
                 }`}
               >
                 {/* Step Indicator */}

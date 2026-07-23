@@ -166,13 +166,13 @@ export default function InvitePage({
         {/* <div className="w-16 h-16  flex items-center justify-center mb-4 relative overflow-hidden">
           <Image
             src="/logo-white.png"
-            alt="TradeBlottr Logo"
+            alt="Peniwyse Logo"
             fill
             className="object-contain p-3.5"
           />
         </div> */}
-        <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-2 text-center tracking-tight">
-          Get Started with <br /> TradeBlottr
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center mb-2">
+          Get Started with <br /> Peniwyse
         </h1>
         {/* <p className="text-muted-theme text-sm mb-4 text-center">
           Create your account to begin
@@ -481,7 +481,7 @@ export default function InvitePage({
                 Account Created!
               </h2>
               <p className="text-slate-500 text-[15px] leading-relaxed mb-6 px-1">
-                Your TradeBlottr account has been created successfully. Log in to complete your onboarding.
+                Your Peniwyse account has been created successfully. Log in to complete your onboarding.
               </p>
 
               {/* Countdown — same style as idle modal */}

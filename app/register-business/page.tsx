@@ -50,7 +50,7 @@ export default function RegisterBusinessPage() {
         >
             {/* Title */}
             <h1 className="text-3xl font-bold text-foreground mb-6 tracking-tight">
-                TradeBlottr Finance
+                Peniwyse Finance
             </h1>
 
             {/* Card */}
