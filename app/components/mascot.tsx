@@ -176,14 +176,14 @@ export function Mascot({ isClosed }: { isClosed: boolean }) {
           />
           <ellipse cx="200" cy="255" rx="70" ry="55" fill="var(--owl-belly)" />
 
-          <path
+          {/* <path
             d="M150 145 Q140 105 165 90 Q160 125 172 140 Z"
             fill="var(--owl-body-dark)"
           />
           <path
             d="M250 145 Q260 105 235 90 Q240 125 228 140 Z"
             fill="var(--owl-body-dark)"
-          />
+          /> */}
 
           <circle
             cx="160"

@@ -135,16 +135,7 @@ export default function LoginPage() {
                 Login to Peniwyse
               </h2>
               <p className="text-sm text-slate-500 mb-2 font-medium">
-                Welcome back, how would you like to access your account?
-              </p>
-              <p className="text-sm text-slate-500 font-medium">
-                Don&apos;t have an account?{" "}
-                <Link
-                  href="#"
-                  className="text-[#3b82f6] font-semibold hover:underline"
-                >
-                  Create an account
-                </Link>
+                Welcome back, kindly login to continue your onboarding process.
               </p>
             </div>
 
@@ -216,9 +207,15 @@ export default function LoginPage() {
       {/* Footer with Copyright and Compliance */}
       <div className="absolute bottom-4 lg:bottom-8 left-0 w-full text-center z-10 px-6">
         <p className="text-xs text-slate-400 font-medium">
-          &copy; {new Date().getFullYear()} Peniwyse. All rights reserved. &middot;{" "}
-          <Link href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</Link> &middot;{" "}
-          <Link href="#" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+          &copy; {new Date().getFullYear()} Peniwyse. All rights reserved.
+          &middot;{" "}
+          <Link href="#" className="hover:text-slate-600 transition-colors">
+            Privacy Policy
+          </Link>{" "}
+          &middot;{" "}
+          <Link href="#" className="hover:text-slate-600 transition-colors">
+            Terms of Service
+          </Link>
         </p>
       </div>
     </div>
