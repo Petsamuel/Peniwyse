@@ -103,7 +103,7 @@ export default function LoginPage() {
               <div className="flex items-center gap-4 mb-10 group lg:hidden ">
                 <div className="h-auto w-10 shrink-0 overflow-hidden flex items-center justify-center">
                   <Image
-                    src={"/image.png"}
+                    src={"/logo2.png"}
                     alt="Logo"
                     width={200}
                     height={200}

@@ -124,7 +124,7 @@ export default React.memo(function MarketPulse() {
             />
           </div>
           <span className="text-2xl font-semibold text-white tracking-tighter -ml-4">
-            TradeBlott<span className="text-[#1596fe] font-black">r</span>
+            Peniwyse
           </span>
         </div>
 

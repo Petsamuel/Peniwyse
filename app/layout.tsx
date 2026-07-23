@@ -24,7 +24,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: "Peniwyse",
-  description: "Peniwyse - Trading Blotter",
+  description: "Peniwyse",
   icons: {
     icon: "/logo2.png",
     shortcut: "/logo2.png",
