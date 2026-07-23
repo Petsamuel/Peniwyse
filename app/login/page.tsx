@@ -2,19 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  MdEmail,
-  MdLock,
-  MdVisibility,
-  MdVisibilityOff,
-  MdChevronRight,
-} from "react-icons/md";
 import { usePartnerLogin } from "@/app/hooks/use-onboarding";
 import { useRole } from "@/app/context/role-context";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
-import Image from "next/image";
-import MarketPulse from "./market-pulse";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -51,13 +43,16 @@ export default function LoginPage() {
           const profile = data?.profile;
           const registration = data?.registration;
           if (token) {
-            import('@/app/utils/auth').then(({ setClientToken }) => {
+            import("@/app/utils/auth").then(({ setClientToken }) => {
               setClientToken(token);
               if (profile) {
                 sessionStorage.setItem("userProfile", JSON.stringify(profile));
               }
               if (registration) {
-                sessionStorage.setItem("userRegistration", JSON.stringify(registration));
+                sessionStorage.setItem(
+                  "userRegistration",
+                  JSON.stringify(registration),
+                );
               } else {
                 sessionStorage.removeItem("userRegistration");
               }
@@ -91,118 +86,118 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col lg:flex-row bg-card-bg font-montserrat overflow-hidden">
+    <div className="min-h-screen relative bg-[#f8fafc] font-montserrat flex items-center justify-center p-6 lg:p-12 overflow-hidden ">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
-      <MarketPulse />
-      {/* RIGHT SIDE: Clean Login Form */}
-      <div className="flex-1 bg-card-bg flex flex-col items-center justify-center p-4 lg:p-20 relative h-full">
-        <div className="w-full max-w-xl flex flex-col animate-in fade-in slide-in-from-right-8 duration-700">
-          <div className="mb-10 font-montserrat">
-            <>
-              {/* Brand Logo - Top Left */}
-              <div className="flex items-center gap-4 mb-10 group lg:hidden ">
-                <div className="h-auto w-10 shrink-0 overflow-hidden flex items-center justify-center">
-                  <Image
-                    src={"/logo2.png"}
-                    alt="Logo"
-                    width={200}
-                    height={200}
-                    className="h-full w-full object-contain scale-[1] translate-y-[2%]"
-                  />
-                </div>
-                <span className="text-2xl font-black text-foreground tracking-tighter -ml-4">
-                  Peniwyse
-                </span>
-              </div>
-            </>
-            <h2 className="text-3xl font-black text-foreground tracking-tight mb-2">
-              Welcome back
+
+      {/* Global Background SVGs */}
+      <div
+        className="absolute inset-0 z-0 mix-blend-multiply brightness-[0.9]"
+        style={{
+          backgroundImage: "url('/Background pattern.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div
+        className="absolute inset-0 z-0 mix-blend-multiply brightness-[0.2]"
+        style={{
+          backgroundImage: "url('/Map.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-7xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
+        {/* Left Side: Marketing Copy */}
+        <div className="flex-1 text-center lg:text-left text-slate-900 max-w-2xl mt-12 lg:mt-0">
+          <h1 className="text-5xl lg:text-6xl xl:text-6xl font-bold tracking-tight mb-4 leading-[1.2]">
+            Seamless Partner <span className="text-[#185fa5]">Onboarding</span>
+            <br />
+            & Compliance
+          </h1>
+          <p className="text-slate-600 text-sm lg:text-base leading-relaxed max-w-lg mx-auto lg:mx-0 mb-8 font-medium">
+            Streamline your corporate onboarding. Peniwyse is a modern B2B
+            compliance portal designed to securely manage identity verification,
+            due diligence, and partner registrations with ease.
+          </p>
+        </div>
+
+        {/* Right Side: Floating Login Card */}
+        <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-8 lg:p-10 shadow-2xl">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-3">
+              Login to Peniwyse
             </h2>
-            <p className="text-sm text-muted-theme">
-              Please enter your credentials to access your account.
+            <p className="text-sm text-slate-500 mb-2 font-medium">
+              Welcome back, how would you like to access your account?
+            </p>
+            <p className="text-sm text-slate-500 font-medium">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="#"
+                className="text-[#3b82f6] font-semibold hover:underline"
+              >
+                Create an account
+              </Link>
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            {/* Email */}
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-semibold uppercase tracking-widest text-foreground ml-1">
-                Email Address
-              </label>
-              <div className="flex items-center gap-3 bg-card-bg border border-border-theme rounded-xl px-4 py-4 focus-within:border-[#1596fe] focus-within:ring-4 focus-within:ring-[#1596fe]/5 transition-all duration-300">
-                <MdEmail className="text-muted-theme" size={20} />
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="name@company.com"
-                  required
-                  className="flex-1 text-sm text-foreground placeholder-slate-300 outline-none bg-transparent"
-                />
-              </div>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="you@companymail.com"
+                required
+                className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl px-4 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
+              />
             </div>
 
-            {/* Password */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-semibold uppercase tracking-widest text-foreground">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  className="text-[9px] font-medium text-[#1596fe] capitalize tracking-widest hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <div className="flex items-center gap-3 bg-card-bg border border-border-theme rounded-xl px-4 py-4 focus-within:border-[#1596fe] focus-within:ring-4 focus-within:ring-[#1596fe]/5 transition-all duration-300">
-                <MdLock className="text-muted-theme" size={20} />
+              <div className="relative flex items-center">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="Password"
                   required
-                  className="flex-1 text-sm text-foreground placeholder-slate-300 outline-none bg-transparent"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl pl-4 pr-16 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((p) => !p)}
-                  className="text-muted-theme hover:text-muted-theme transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
                 >
-                  {showPassword ? (
-                    <MdVisibilityOff size={20} />
-                  ) : (
-                    <MdVisibility size={20} />
-                  )}
+                  {showPassword ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
 
-            {/* Error */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#3b82f6] hover:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             {displayError && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-bold rounded-xl px-4 py-3">
+              <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-medium rounded-lg px-4 py-3">
                 {displayError}
               </div>
             )}
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={isPending || !username.trim() || !password}
-              className="mt-4 w-full py-4.5 bg-[#1596fe] rounded-xl text-xs font-black uppercase tracking-widest text-white hover:bg-[#0e7cdb] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 shadow-xl shadow-blue-500/10 active:scale-[0.98]"
+              className="mt-2 w-full py-4 bg-[#3b82f6] hover:bg-[#2563eb] rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/20"
             >
-              {isPending ? "Authenticating..." : "Continue Onboarding"}
+              {isPending ? "Authenticating..." : "Sign In"}
             </button>
           </form>
-
-          {/* Help Footer */}
-          <p className="mt-12 text-center text-[10px] text-muted-theme font-medium">
-            Having trouble logging in?{" "}
-            <button className="text-[#1596fe] font-bold hover:underline">
-              Contact Support
-            </button>
-          </p>
         </div>
       </div>
     </div>

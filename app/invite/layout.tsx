@@ -20,6 +20,25 @@ export default function InviteLayout({
 }) {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden w-full transition-colors duration-300">
+      {/* Global Background SVGs */}
+      <div
+        className="absolute inset-0 z-0 mix-blend-multiply brightness-[0.9]"
+        style={{
+          backgroundImage: "url('/Background pattern.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div
+        className="absolute inset-0 z-0 mix-blend-multiply brightness-[0.9]"
+        style={{
+          backgroundImage: "url('/Map.svg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
+
       {/* Top Left Gradient */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
 
