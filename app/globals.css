@@ -1,0 +1,107 @@
+@import "tailwindcss";
+@source "./**/*.{tsx,ts,jsx,js}";
+
+:root {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --surface: #ffffff;
+  --surface-hover: #e2e8f0;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --accent: #185fa5;
+  --card-bg: #ffffff;
+  --header-bg: rgba(255, 255, 255, 0.8);
+  --header-shadow: inset 0rem 0rem 0.0625rem 0.0625rem rgba(255,255,255,0.9), 0rem 1.25rem 1.6875rem 0rem rgba(0,0,0,0.05);
+}
+
+
+
+.dark {
+  color-scheme: dark;
+  --background: #0b1424;
+  --foreground: #f8fafc;
+  --surface: #0d1b2e;
+  --surface-hover: #1e293b;
+  --border: #1e293b;
+  --muted: #94a3b8;
+  --accent: #1596fe;
+  --card-bg: #0d1b2e;
+  --header-bg: rgba(13, 27, 46, 0.8);
+  --header-shadow: inset 0rem 0rem 0.0625rem 0.0625rem rgba(255,255,255,0.05), 0rem 1.25rem 1.6875rem 0rem rgba(0,0,0,0.2);
+}
+
+.dark .retrieve-card-bg {
+  background: linear-gradient(to right, #185fa5, #124a82) !important;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface-hover: var(--surface-hover);
+  --color-header-bg: var(--header-bg);
+  --color-header-shadow: var(--header-shadow);
+  --color-border-theme: var(--border);
+
+  --color-muted-theme: var(--muted);
+  --color-accent: var(--accent);
+  --color-card-bg: var(--card-bg);
+  --font-sans: var(--font-inter);
+  --font-poppins: var(--font-poppins);
+  --font-montserrat: var(--font-montserrat);
+}
+
+
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Custom Scrollbar for premium look */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.4);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.1);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Force watermark icons to be white regardless of passed classes */
+.icon-watermark svg, 
+.icon-watermark i {
+  color: white !important;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0%); }
+}
+
+.animate-marquee {
+  animation: marquee 90s linear infinite;
+  display: flex;
+  flex-wrap: nowrap;
+  width: max-content;
+}

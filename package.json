@@ -1,0 +1,37 @@
+{
+  "name": "peniwyse",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.99.0",
+    "country-flag-icons": "^1.6.20",
+    "country-state-city": "^3.2.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.38.0",
+    "next": "16.2.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-icons": "^5.6.0",
+    "react-phone-input-2": "^2.15.1",
+    "react-phone-number-input": "^3.4.17",
+    "react-select": "^5.10.2",
+    "recharts": "^3.8.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
