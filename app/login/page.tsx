@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { usePartnerLogin } from "@/app/hooks/use-onboarding";
 import { useRole } from "@/app/context/role-context";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import Link from "next/link";
+import { Mascot } from "@/app/components/mascot";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   let displayError = "";
   if (error) {
@@ -86,7 +89,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative bg-[#f8fafc] font-montserrat flex items-center justify-center p-6 lg:p-12 overflow-hidden ">
+    <div className="min-h-screen relative bg-[#f8fafc] font-montserrat flex items-center justify-center p-6 lg:p-12 overflow-hidden">
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
 
       {/* Global Background SVGs */}
@@ -110,11 +113,10 @@ export default function LoginPage() {
 
       <div className="relative z-10 w-full max-w-7xl flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
         {/* Left Side: Marketing Copy */}
-        <div className="flex-1 text-center lg:text-left text-slate-900 max-w-2xl mt-12 lg:mt-0">
+        <div className="hidden lg:block flex-1 text-center lg:text-left text-slate-900 max-w-2xl mt-12 lg:mt-0">
           <h1 className="text-5xl lg:text-6xl xl:text-6xl font-bold tracking-tight mb-4 leading-[1.2]">
             Seamless Partner <span className="text-[#185fa5]">Onboarding</span>
-            <br />
-            & Compliance
+            <br />& Compliance
           </h1>
           <p className="text-slate-600 text-sm lg:text-base leading-relaxed max-w-lg mx-auto lg:mx-0 mb-8 font-medium">
             Streamline your corporate onboarding. Peniwyse is a modern B2B
@@ -124,81 +126,100 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side: Floating Login Card */}
-        <div className="w-full max-w-lg bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-8 lg:p-10 shadow-2xl">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-3">
-              Login to Peniwyse
-            </h2>
-            <p className="text-sm text-slate-500 mb-2 font-medium">
-              Welcome back, how would you like to access your account?
-            </p>
-            <p className="text-sm text-slate-500 font-medium">
-              Don&apos;t have an account?{" "}
-              <Link
-                href="#"
-                className="text-[#3b82f6] font-semibold hover:underline"
-              >
-                Create an account
-              </Link>
-            </p>
-          </div>
+        <div className="w-full max-w-lg relative mt-24 lg:mt-0 mx-auto">
+          <Mascot isClosed={passwordFocused} />
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="you@companymail.com"
-                required
-                className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl px-4 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
-              />
+          <div className="bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-8 lg:p-10 shadow-2xl relative z-10 z-30">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-slate-900 mb-3">
+                Login to Peniwyse
+              </h2>
+              <p className="text-sm text-slate-500 mb-2 font-medium">
+                Welcome back, how would you like to access your account?
+              </p>
+              <p className="text-sm text-slate-500 font-medium">
+                Don&apos;t have an account?{" "}
+                <Link
+                  href="#"
+                  className="text-[#3b82f6] font-semibold hover:underline"
+                >
+                  Create an account
+                </Link>
+              </p>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <div className="relative flex items-center">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
                 <input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="you@companymail.com"
                   required
-                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl pl-4 pr-16 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl px-4 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
                 />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    placeholder="Password"
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-[#3b82f6] focus:ring-4 focus:ring-[#3b82f6]/10 rounded-xl pl-4 pr-16 py-3.5 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? (
+                      <MdVisibilityOff size={20} />
+                    ) : (
+                      <MdVisibility size={20} />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 text-xs font-medium text-slate-500 hover:text-slate-700 transition-colors"
+                  className="text-xs font-semibold text-[#3b82f6] hover:underline"
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  Forgot Password?
                 </button>
               </div>
-            </div>
 
-            <div className="flex justify-end">
+              {displayError && (
+                <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-medium rounded-lg px-4 py-3">
+                  {displayError}
+                </div>
+              )}
+
               <button
-                type="button"
-                className="text-xs font-semibold text-[#3b82f6] hover:underline"
+                type="submit"
+                disabled={isPending || !username.trim() || !password}
+                className="mt-2 w-full py-4 bg-[#3b82f6] hover:bg-[#2563eb] rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/20"
               >
-                Forgot Password?
+                {isPending ? "Authenticating..." : "Sign In"}
               </button>
-            </div>
-
-            {displayError && (
-              <div className="bg-red-50 border border-red-100 text-red-600 text-xs font-medium rounded-lg px-4 py-3">
-                {displayError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isPending || !username.trim() || !password}
-              className="mt-2 w-full py-4 bg-[#3b82f6] hover:bg-[#2563eb] rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/20"
-            >
-              {isPending ? "Authenticating..." : "Sign In"}
-            </button>
-          </form>
+            </form>
+          </div>
         </div>
+      </div>
+
+      {/* Footer with Copyright and Compliance */}
+      <div className="absolute bottom-4 lg:bottom-8 left-0 w-full text-center z-10 px-6">
+        <p className="text-xs text-slate-400 font-medium">
+          &copy; {new Date().getFullYear()} Peniwyse. All rights reserved. &middot;{" "}
+          <Link href="#" className="hover:text-slate-600 transition-colors">Privacy Policy</Link> &middot;{" "}
+          <Link href="#" className="hover:text-slate-600 transition-colors">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );
