@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction, useEffect } from "react";
+import { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction, useEffect, useRef } from "react";
 import { RegistrationInfo, useLookupCompany } from "../../hooks/use-onboarding";
 
 interface OnboardingContextProps {
@@ -24,20 +24,24 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<RegistrationInfo | null>(null);
+  const lastRefreshedRcNumber = useRef<string | null>(null);
 
   const lookupCompany = useLookupCompany();
 
   useEffect(() => {
-    if (registrationData?.rcNumber) {
-      lookupCompany.mutateAsync(registrationData.rcNumber)
-        .then(res => {
-          if (res.success && res.data) {
-            setRegistrationData(res.data);
-          }
-        })
-        .catch(err => console.error("Failed to refresh profile on step change", err));
-    }
-  }, [currentStep]);
+    if (!registrationData?.rcNumber) return;
+    if (lastRefreshedRcNumber.current === registrationData.rcNumber) return;
+
+    lastRefreshedRcNumber.current = registrationData.rcNumber;
+
+    lookupCompany.mutateAsync(registrationData.rcNumber)
+      .then(res => {
+        if (res.success && res.data) {
+          setRegistrationData(res.data);
+        }
+      })
+      .catch(err => console.error("Failed to refresh profile on step change", err));
+  }, [currentStep, registrationData?.rcNumber]);
 
   const markStepCompleted = (step: number) => {
     setCompletedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));

@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import logoImg from "@/public/logo2.png";
+import logoImg from "@/public/logo-brand.png";
 
 export const metadata: Metadata = {
   title: "Invite - Peniwyse",

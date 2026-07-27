@@ -26,9 +26,9 @@ export const metadata: Metadata = {
   title: "Peniwyse",
   description: "Peniwyse",
   icons: {
-    icon: "/logo2.png",
-    shortcut: "/logo2.png",
-    apple: "/logo2.png",
+    icon: [{ url: "/favicon.ico", type: "image/svg+xml" }, { url: "/favicon.ico", rel: "shortcut icon" }],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.svg",
   },
 };
 

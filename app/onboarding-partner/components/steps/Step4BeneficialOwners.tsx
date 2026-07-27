@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
-import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
+import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, useLookupCompany, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import { MdOutlinePerson, MdOutlineEmail, MdOutlineLocationOn, MdOutlinePublic, MdOutlineMap, MdOutlineSignpost, MdAdd, MdDelete, MdCheckCircle, MdOutlinePercent, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
@@ -94,6 +94,26 @@ interface ApiBeneficialOwner {
   verificationUrl?: string;
   verificationLink?: string;
   url?: string;
+  proofOfWealthUrl?: string;
+  identityDocumentUrl?: string;
+  proofOfAddressUrl?: string;
+  proofOfWealthStatus?: string;
+  proofOfAddressStatus?: string;
+  documents?: Array<{
+    id?: string;
+    documentType?: string;
+    documentTypeId?: string;
+    type?: string;
+    category?: string;
+    url?: string;
+    fileUrl?: string;
+    documentUrl?: string;
+    downloadUrl?: string;
+    contentUrl?: string;
+    path?: string;
+    content?: string;
+    status?: string;
+  }>;
 }
 
 export default function Step4BeneficialOwners() {
@@ -102,7 +122,38 @@ export default function Step4BeneficialOwners() {
   const completeOwners = useCompleteBeneficialOwners();
   const verifyOwner = useVerifyBeneficialOwner();
   const uploadDocument = useUploadShareholderDocument();
+  const lookupCompany = useLookupCompany();
   const { info, error: showError, success, toasts, dismiss } = useToast();
+  const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
+
+  const extractDocumentUrl = (owner: ApiBeneficialOwner, docType: "wealth" | "address") => {
+    const documents = Array.isArray(owner.documents) ? owner.documents : [];
+    const relevantDocuments = documents.filter((doc) => {
+      const typeName = `${doc.documentType || doc.documentTypeId || doc.type || doc.category || ""}`.toLowerCase();
+      if (docType === "wealth") {
+        return /wealth|source|identity/i.test(typeName);
+      }
+      return /address|residential/i.test(typeName);
+    });
+
+    const pickValue = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+    const matchingDocument = relevantDocuments[0];
+    const documentUrl = pickValue(
+      matchingDocument?.url ||
+      matchingDocument?.fileUrl ||
+      matchingDocument?.documentUrl ||
+      matchingDocument?.downloadUrl ||
+      matchingDocument?.contentUrl ||
+      matchingDocument?.path ||
+      matchingDocument?.content,
+    );
+
+    if (documentUrl) return documentUrl;
+
+    return docType === "wealth"
+      ? (pickValue(owner.proofOfWealthUrl) || pickValue(owner.identityDocumentUrl))
+      : pickValue(owner.proofOfAddressUrl);
+  };
 
   const mapOwners = (apiOwners: ApiBeneficialOwner[]): SavedOwner[] => {
     return apiOwners.map((bo) => ({
@@ -127,6 +178,10 @@ export default function Step4BeneficialOwners() {
       shareholderId: bo.id,
       verificationStatus: bo.verificationStatus || "Pending",
       verificationUrl: bo.verificationUrl || bo.verificationLink || bo.url,
+      proofOfWealthUrl: extractDocumentUrl(bo, "wealth"),
+      proofOfWealthStatus: bo.proofOfWealthStatus || (extractDocumentUrl(bo, "wealth") ? "Uploaded" : "Pending Upload"),
+      proofOfAddressUrl: extractDocumentUrl(bo, "address"),
+      proofOfAddressStatus: bo.proofOfAddressStatus || (extractDocumentUrl(bo, "address") ? "Uploaded" : "Pending Upload"),
     }));
   };
 
@@ -367,16 +422,17 @@ export default function Step4BeneficialOwners() {
     }
 
     try {
+      setUploadingDocs(prev => ({ ...prev, [`${owner.shareholderId}-${docType}`]: true }));
       const uploadFormData = new FormData();
       uploadFormData.append("shareholderId", owner.shareholderId);
       
-      let fieldName = "file";
-      if (docType.toLowerCase().includes("identity")) {
-        fieldName = "identityDocument";
-      } else if (docType.toLowerCase().includes("address")) {
+      let fieldName = "identityDocument";
+      if (docType.toLowerCase().includes("address")) {
         fieldName = "proofOfAddress";
       } else if (docType.toLowerCase().includes("wealth")) {
-        fieldName = "proofOfWealth";
+        fieldName = "identityDocument";
+      } else if (docType.toLowerCase().includes("identity")) {
+        fieldName = "identityDocument";
       }
       
       uploadFormData.append(fieldName, file);
@@ -384,13 +440,22 @@ export default function Step4BeneficialOwners() {
       info("Uploading", `Uploading ${docType}...`);
       const updatedData = await uploadDocument.mutateAsync(uploadFormData);
       
-      if (updatedData) {
+      if (registrationData?.rcNumber) {
+        const freshData = await lookupCompany.mutateAsync(registrationData.rcNumber);
+        if (freshData?.success && freshData.data) {
+          setRegistrationData(freshData.data);
+        } else if (updatedData) {
+          setRegistrationData(updatedData);
+        }
+      } else if (updatedData) {
         setRegistrationData(updatedData);
       }
 
       success("Success", `${docType} uploaded successfully.`);
     } catch (err: unknown) {
       showError("Error", err instanceof Error ? err.message : "Failed to upload document");
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [`${owner.shareholderId}-${docType}`]: false }));
     }
   };
 
@@ -612,9 +677,11 @@ export default function Step4BeneficialOwners() {
                   <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Proof of Source of Wealth */}
                     <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col items-start gap-1">
                         <span className="text-xs font-semibold text-slate-700">Proof of Source of Wealth</span>
-                        <span className="text-[10px] text-slate-500">{owner.proofOfWealthStatus === 'Uploaded' ? 'Uploaded' : 'Pending Upload'}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${owner.proofOfWealthStatus === 'Uploaded' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {owner.proofOfWealthStatus === 'Uploaded' ? 'Uploaded' : 'Pending Upload'}
+                        </span>
                       </div>
                       <div className="shrink-0 relative">
                         <input
@@ -622,6 +689,7 @@ export default function Step4BeneficialOwners() {
                           id={`pow-${owner.shareholderId}`}
                           className="hidden"
                           onChange={(e) => handleUploadDocument(idx, "Proof of Wealth", e.target.files?.[0] || null)}
+                          disabled={uploadingDocs[`${owner.shareholderId}-Proof of Wealth`]}
                         />
                         <label
                           htmlFor={`pow-${owner.shareholderId}`}
@@ -629,19 +697,21 @@ export default function Step4BeneficialOwners() {
                             owner.proofOfWealthStatus === 'Uploaded' 
                               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
                               : 'bg-accent/10 text-accent hover:bg-accent/20'
-                          }`}
+                          } ${uploadingDocs[`${owner.shareholderId}-Proof of Wealth`] ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                         >
                           <MdOutlineCloudUpload className="w-4 h-4" />
-                          {owner.proofOfWealthStatus === 'Uploaded' ? 'Change File' : 'Upload'}
+                          {uploadingDocs[`${owner.shareholderId}-Proof of Wealth`] ? 'Uploading...' : (owner.proofOfWealthStatus === 'Uploaded' ? 'Change File' : 'Upload')}
                         </label>
                       </div>
                     </div>
 
                     {/* Proof of Address */}
                     <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-3 rounded-lg flex items-center justify-between">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col items-start gap-1">
                         <span className="text-xs font-semibold text-slate-700">Proof of Address</span>
-                        <span className="text-[10px] text-slate-500">{owner.proofOfAddressStatus === 'Uploaded' ? 'Uploaded' : 'Pending Upload'}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${owner.proofOfAddressStatus === 'Uploaded' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                          {owner.proofOfAddressStatus === 'Uploaded' ? 'Uploaded' : 'Pending Upload'}
+                        </span>
                       </div>
                       <div className="shrink-0 relative">
                         <input
@@ -649,6 +719,7 @@ export default function Step4BeneficialOwners() {
                           id={`poa-${owner.shareholderId}`}
                           className="hidden"
                           onChange={(e) => handleUploadDocument(idx, "Proof of Address", e.target.files?.[0] || null)}
+                          disabled={uploadingDocs[`${owner.shareholderId}-Proof of Address`]}
                         />
                         <label
                           htmlFor={`poa-${owner.shareholderId}`}
@@ -656,10 +727,10 @@ export default function Step4BeneficialOwners() {
                             owner.proofOfAddressStatus === 'Uploaded' 
                               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
                               : 'bg-accent/10 text-accent hover:bg-accent/20'
-                          }`}
+                          } ${uploadingDocs[`${owner.shareholderId}-Proof of Address`] ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                         >
                           <MdOutlineCloudUpload className="w-4 h-4" />
-                          {owner.proofOfAddressStatus === 'Uploaded' ? 'Change File' : 'Upload'}
+                          {uploadingDocs[`${owner.shareholderId}-Proof of Address`] ? 'Uploading...' : (owner.proofOfAddressStatus === 'Uploaded' ? 'Change File' : 'Upload')}
                         </label>
                       </div>
                     </div>

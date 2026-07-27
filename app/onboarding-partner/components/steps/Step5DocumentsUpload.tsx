@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useDocumentTypes } from "@/app/hooks/use-document-types";
 import {
   useCompleteDocuments,
   useUploadShareholderDocument,
-  useLookupCompany,
   useVerifyBeneficialOwner,
+  useLookupCompany,
 } from "@/app/hooks/use-onboarding";
 import {
   MdOutlineCloudUpload,
@@ -35,11 +35,27 @@ interface BeneficialOwnerDocInfo {
   firstName?: string;
   lastName?: string;
   proofOfWealthUrl?: string;
+  identityDocumentUrl?: string;
   proofOfAddressUrl?: string;
   verificationUrl?: string;
   verificationLink?: string;
   url?: string;
   verificationStatus?: string;
+  documents?: Array<{
+    id?: string;
+    documentType?: string;
+    documentTypeId?: string;
+    type?: string;
+    category?: string;
+    url?: string;
+    fileUrl?: string;
+    documentUrl?: string;
+    downloadUrl?: string;
+    contentUrl?: string;
+    path?: string;
+    content?: string;
+    status?: string;
+  }>;
 }
 
 // AML Due Diligence is a special hardcoded company doc with a downloadable PDF
@@ -58,7 +74,6 @@ export default function Step5DocumentsUpload() {
   const { data: documentTypes, isLoading } = useDocumentTypes();
   const completeDocs = useCompleteDocuments();
   const uploadShareholderDoc = useUploadShareholderDocument();
-  const lookupCompany = useLookupCompany();
   const verifyBeneficialOwner = useVerifyBeneficialOwner();
   const { info, error: showError, success, toasts, dismiss } = useToast();
 
@@ -66,7 +81,6 @@ export default function Step5DocumentsUpload() {
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
   // per-owner: "generating" | "refreshing" | null
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const [generatedVerificationLinks, setGeneratedVerificationLinks] = useState<
@@ -100,26 +114,6 @@ export default function Step5DocumentsUpload() {
     };
   };
 
-  // Refresh registration data on mount so beneficial owner docs are current
-  useEffect(() => {
-    if (!registrationData?.rcNumber) return;
-    queueMicrotask(() => {
-      setIsRefreshing(true);
-    });
-    lookupCompany
-      .mutateAsync(registrationData.rcNumber)
-      .then((res) => {
-        if (res.success && res.data) {
-          setRegistrationData(res.data);
-        }
-      })
-      .catch(() => {
-        /* silently fail */
-      })
-      .finally(() => setIsRefreshing(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
-
   const handleFileChange = (docTypeId: string, file: File | null) => {
     if (file) {
       setSelectedFiles((prev) => ({ ...prev, [docTypeId]: file }));
@@ -132,6 +126,8 @@ export default function Step5DocumentsUpload() {
     }
   };
 
+  const lookupCompany = useLookupCompany();
+
   const handleShareholderDocUpload = async (
     shareholderId: string,
     docType: string,
@@ -142,11 +138,13 @@ export default function Step5DocumentsUpload() {
       const uploadFormData = new FormData();
       uploadFormData.append("shareholderId", shareholderId);
 
-      let fieldName = "file";
-      if (docType.toLowerCase().includes("wealth")) {
-        fieldName = "proofOfWealth";
-      } else if (docType.toLowerCase().includes("address")) {
+      let fieldName = "identityDocument";
+      if (docType.toLowerCase().includes("address")) {
         fieldName = "proofOfAddress";
+      } else if (docType.toLowerCase().includes("wealth")) {
+        fieldName = "identityDocument";
+      } else if (docType.toLowerCase().includes("identity")) {
+        fieldName = "identityDocument";
       }
 
       uploadFormData.append(fieldName, file);
@@ -155,7 +153,14 @@ export default function Step5DocumentsUpload() {
       const updatedData =
         await uploadShareholderDoc.mutateAsync(uploadFormData);
 
-      if (updatedData) {
+      if (registrationData?.rcNumber) {
+        const freshData = await lookupCompany.mutateAsync(registrationData.rcNumber);
+        if (freshData?.success && freshData.data) {
+          setRegistrationData(freshData.data);
+        } else if (updatedData) {
+          setRegistrationData(updatedData);
+        }
+      } else if (updatedData) {
         setRegistrationData(updatedData);
       }
 
@@ -201,6 +206,38 @@ export default function Step5DocumentsUpload() {
     }
   };
 
+  const getBeneficialOwnerDocumentUrl = (
+    owner: BeneficialOwnerDocInfo,
+    docType: "wealth" | "address",
+  ) => {
+    const documents = Array.isArray(owner.documents) ? owner.documents : [];
+    const relevantDocuments = documents.filter((doc) => {
+      const typeName = `${doc.documentType || doc.documentTypeId || doc.type || doc.category || ""}`.toLowerCase();
+      if (docType === "wealth") {
+        return /wealth|source|identity/i.test(typeName);
+      }
+      return /address|residential/i.test(typeName);
+    });
+
+    const pickValue = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+    const matchingDocument = relevantDocuments[0];
+    const documentUrl = pickValue(
+      matchingDocument?.url ||
+      matchingDocument?.fileUrl ||
+      matchingDocument?.documentUrl ||
+      matchingDocument?.downloadUrl ||
+      matchingDocument?.contentUrl ||
+      matchingDocument?.path ||
+      matchingDocument?.content,
+    );
+
+    if (documentUrl) return documentUrl;
+
+    return docType === "wealth"
+      ? (pickValue(owner.proofOfWealthUrl) || pickValue(owner.identityDocumentUrl))
+      : pickValue(owner.proofOfAddressUrl);
+  };
+
   const allShareholderDocs = useMemo(() => {
     const docs: Array<{
       shareholderId: string;
@@ -241,7 +278,7 @@ export default function Step5DocumentsUpload() {
         shareholderId: ownerId as string,
         name: `${owner.firstName} ${owner.lastName}`,
         docType: "Proof of Wealth",
-        url: owner.proofOfWealthUrl as string | undefined,
+        url: getBeneficialOwnerDocumentUrl(owner, "wealth"),
       });
 
       // Proof of Address
@@ -249,7 +286,7 @@ export default function Step5DocumentsUpload() {
         shareholderId: ownerId as string,
         name: `${owner.firstName} ${owner.lastName}`,
         docType: "Proof of Address",
-        url: owner.proofOfAddressUrl as string | undefined,
+        url: getBeneficialOwnerDocumentUrl(owner, "address"),
       });
     });
     return docs;
@@ -353,16 +390,12 @@ export default function Step5DocumentsUpload() {
     }
   };
 
-  if (isLoading || isRefreshing) {
+  if (isLoading) {
     return (
       <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex-1 flex items-center justify-center gap-3">
           <div className="w-5 h-5 rounded-full border-2 border-[#185A9D] border-t-transparent animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400">
-            {isRefreshing
-              ? "Refreshing your documents..."
-              : "Loading document requirements..."}
-          </p>
+          <p className="text-slate-500 dark:text-slate-400">Loading document requirements...</p>
         </div>
       </div>
     );
@@ -387,7 +420,10 @@ export default function Step5DocumentsUpload() {
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mt-6">
       {/* Tabs */}
       <div className="flex items-center gap-8 border-b border-slate-100 dark:border-slate-700 mb-8 pb-3">
-        {(["Pending Actions", "In Review"] as Tab[]).map((tab) => {
+        {([
+          "Pending Actions", 
+        //  "In Review"
+        ] as Tab[]).map((tab) => {
           const isActive = activeTab === tab;
           let count = 0;
           let Icon = MdOutlineAccessTime;
@@ -395,10 +431,12 @@ export default function Step5DocumentsUpload() {
           if (tab === "Pending Actions") {
             count = pendingCount;
             Icon = MdOutlineAccessTime;
-          } else if (tab === "In Review") {
-            count = inReviewCount;
-            Icon = MdOutlineVisibility;
-          }
+          } 
+          
+          // else if (tab === "In Review") {
+          //   count = inReviewCount;
+          //   Icon = MdOutlineVisibility;
+          // }
 
           return (
             <button
@@ -426,13 +464,13 @@ export default function Step5DocumentsUpload() {
                   <MdCheckCircle className="w-3.5 h-3.5 inline mr-1" /> All Done
                 </span>
               )}
-              {tab === "In Review" && (
+              {/* {tab === "In Review" && (
                 <span
                   className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${isActive ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"}`}
                 >
                   {count}
                 </span>
-              )}
+              )} */}
               {isActive && (
                 <div className="absolute -bottom-[13px] left-0 right-0 h-0.5 bg-slate-900 dark:bg-white rounded-t-full" />
               )}

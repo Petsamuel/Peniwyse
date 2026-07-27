@@ -130,7 +130,7 @@ export default function Step1BasicInfo() {
             <input
               type="text"
               name="legalName"
-              placeholder="Credlanche"
+              placeholder="Company name"
               value={formData.legalName}
               onChange={handleChange}
               className={getInputClassName("legalName")}

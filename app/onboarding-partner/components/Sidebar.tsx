@@ -3,7 +3,7 @@
 import { useOnboardingPartner } from "../context/OnboardingContext";
 import { MdCheck } from "react-icons/md";
 import Image from "next/image";
-import logoImg from "@/public/logo2.png";
+import logoImg from "@/public/logo-brand.png";
 
 const STEPS = [
   { id: 1, title: "Basic Information" },
