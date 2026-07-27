@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import logoImg from "@/public/logo2.png";
 
 export const metadata: Metadata = {
   title: "Invite - Peniwyse",
@@ -48,14 +49,15 @@ export default function InviteLayout({
       {/* Header */}
       <header className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-5 md:px-10 md:py-6">
         {/* Left: Brand Logo */}
-        <Link href="/" className="flex items-center ">
-          <div className="w-10 h-10  flex items-center justify-center p-1.5">
+        <Link href="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 flex items-center justify-center relative">
             <Image
-              src="/logo2.png"
+              src={logoImg}
               alt="Peniwyse Logo"
-              width={22}
-              height={22}
-              className="object-contain rounded-md"
+              width={32}
+              height={32}
+              className="w-full h-full object-contain rounded-md"
+              priority
             />
           </div>
           <span className="text-[22px] font-semibold text-foreground tracking-tight hidden sm:block">

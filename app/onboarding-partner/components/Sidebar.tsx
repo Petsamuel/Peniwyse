@@ -3,6 +3,7 @@
 import { useOnboardingPartner } from "../context/OnboardingContext";
 import { MdCheck } from "react-icons/md";
 import Image from "next/image";
+import logoImg from "@/public/logo2.png";
 
 const STEPS = [
   { id: 1, title: "Basic Information" },
@@ -43,17 +44,18 @@ export default function Sidebar() {
       <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-accent opacity-10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Logo */}
-      <div className="relative z-10 flex items-center gap-4 mb-10 px-2">
-        <div className="h-auto w-10 shrink-0 overflow-hidden flex items-center justify-center">
+      <div className="relative z-10 flex items-center gap-3 mb-10 px-2">
+        <div className="w-8 h-8 shrink-0 flex items-center justify-center relative">
           <Image
-            src="/logo2.png"
-            alt="Logo"
-            width={16}
-            height={16}
-            className="h-full w-[30px] object-contain scale-[1] translate-y-[5%]"
+            src={logoImg}
+            alt="Peniwyse Logo"
+            width={32}
+            height={32}
+            className="w-full h-full object-contain"
+            priority
           />
         </div>
-        <span className="text-xl font-semibold text-slate-800 tracking-tight -ml-4">
+        <span className="text-xl font-semibold text-slate-800 tracking-tight">
           Peniwyse
         </span>
       </div>
