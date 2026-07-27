@@ -189,12 +189,10 @@ export default function Step3AdditionalDetails() {
         },
       });
       setRegistrationData((prev) =>
-        prev
-          ? ({
-              ...prev,
-              ...(data as unknown as Partial<RegistrationInfo>),
-            } as RegistrationInfo)
-          : prev,
+        ({
+          ...(prev || {}),
+          ...(data as unknown as Partial<RegistrationInfo>),
+        }) as RegistrationInfo,
       );
 
       markStepCompleted(3);

@@ -103,7 +103,7 @@ export default function Step1BasicInfo() {
         },
       });
       setRegistrationData((prev) => 
-        prev ? { ...prev, ...(data as unknown as Partial<RegistrationInfo>) } as RegistrationInfo : prev
+        ({ ...(prev || {}), ...(data as unknown as Partial<RegistrationInfo>) }) as RegistrationInfo
       );
       markStepCompleted(1);
       goToNextStep();

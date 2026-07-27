@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, useLookupCompany, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
-import { MdOutlinePerson, MdOutlineEmail, MdOutlineLocationOn, MdOutlinePublic, MdOutlineMap, MdOutlineSignpost, MdAdd, MdDelete, MdCheckCircle, MdOutlinePercent, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
+import { MdOutlinePerson, MdAdd, MdDelete, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
 import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
-import Select, { SingleValue, MultiValue, ActionMeta, ClassNamesConfig } from 'react-select';
+import Select, { SingleValue, MultiValue, ClassNamesConfig } from 'react-select';
 import { Country, State, City } from 'country-state-city';
 import * as Flags from 'country-flag-icons/react/3x2';
 
@@ -471,7 +471,18 @@ export default function Step4BeneficialOwners() {
 
       const response = await completeOwners.mutateAsync(companyId);
       
+      let updatedCompanyData = null;
+      if (registrationData?.rcNumber) {
+        const freshData = await lookupCompany.mutateAsync(registrationData.rcNumber);
+        if (freshData?.success && freshData.data) {
+          updatedCompanyData = freshData.data;
+        }
+      }
+
       setRegistrationData(prev => {
+        if (updatedCompanyData) {
+          return updatedCompanyData;
+        }
         if (response && response.companyId) {
           return response;
         }

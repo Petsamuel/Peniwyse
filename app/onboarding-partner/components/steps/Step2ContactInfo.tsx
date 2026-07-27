@@ -276,7 +276,7 @@ export default function Step2ContactInfo() {
         payload,
       });
       setRegistrationData((prev) => 
-        prev ? { ...prev, ...(data as unknown as Partial<RegistrationInfo>) } as RegistrationInfo : prev
+        ({ ...(prev || {}), ...(data as unknown as Partial<RegistrationInfo>) }) as RegistrationInfo
       );
 
       markStepCompleted(2);
