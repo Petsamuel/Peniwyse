@@ -28,10 +28,10 @@ interface SavedOwner extends BeneficialOwnerPayload {
   proofOfAddressStatus?: string;
 }
 
-const getSelectClassNames = (hasIcon: boolean): ClassNamesConfig<OptionType> => ({
+const getSelectClassNames = (hasIcon: boolean, isMissing: boolean = false): ClassNamesConfig<OptionType> => ({
   control: (state) => 
     `w-full min-h-[44px] ${hasIcon ? 'pl-10' : ''} px-4 rounded-xl border ${
-      state.isFocused ? 'border-accent ring-1 ring-accent' : 'border-slate-200'
+      isMissing ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500' : state.isFocused ? 'border-accent ring-1 ring-accent' : 'border-slate-200'
     } bg-white text-sm transition-colors cursor-pointer flex items-center`,
   menu: () => "mt-1 bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden z-50 text-sm",
   option: (state) => 
@@ -317,10 +317,11 @@ export default function Step4BeneficialOwners() {
     if (!formData.postalCode) newMissingFields.push("postalCode");
     if (!formData.ownershipPercentage) newMissingFields.push("ownershipPercentage");
     if (!formData.sourceOfWealth) newMissingFields.push("sourceOfWealth");
+    if (!formData.isShareholder && !formData.isDirector && !formData.isLegalRepresentative) newMissingFields.push("roles");
 
     if (newMissingFields.length > 0) {
       setMissingFields(newMissingFields);
-      setError("Please fill in all required fields (Name, Email, Phone, DOB, Postal Code, Percentage, Source of Wealth).");
+      setError("Please fill in all required fields (Name, Email, Phone, DOB, Postal Code, Percentage, Source of Wealth), and select at least one Role.");
       return;
     }
     
@@ -520,18 +521,14 @@ export default function Step4BeneficialOwners() {
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8 max-w-3xl">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-slate-800 mb-2">Beneficial Owners</h2>
-        <p className="text-slate-500 text-sm mb-6">Add every individual who owns more than 25% of the business</p>
+        <p className="text-slate-500 text-sm mb-6">Add every individual who has ownership in the business</p>
         
         <div className="flex items-center gap-2 mb-6 text-xs text-slate-400">
           <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center shrink-0">
             <span className="text-white text-[10px]">➔</span>
           </div>
-          <p><strong className="font-semibold text-slate-600">Beneficial Owner:</strong> An individual who owns more than 25% of the business</p>
+          <p><strong className="font-semibold text-slate-600">Beneficial Owner:</strong> An individual who holds an ownership stake in the business</p>
         </div>
-
-        {/* <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-          <p className="text-slate-600 text-sm font-medium">Beneficial Owners are optional to fill right now. If added, they must complete KYC before submission.</p>
-        </div> */}
       </div>
 
       {error && (
@@ -581,7 +578,7 @@ export default function Step4BeneficialOwners() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {owner.verificationUrl && (
+                  {owner.verificationUrl && owner.verificationStatus?.toLowerCase() !== "approved" && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -643,11 +640,21 @@ export default function Step4BeneficialOwners() {
               <div className="mt-2 p-3 bg-slate-50 border border-slate-100 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Verification Link</span>
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${owner.verificationUrl ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 'text-slate-500 bg-slate-100 border-slate-200'}`}>
-                    {owner.verificationUrl ? (owner.verificationStatus === 'Pending' ? 'Active' : owner.verificationStatus) : 'Inactive'}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                    owner.verificationStatus?.toLowerCase() === 'approved' || owner.verificationUrl 
+                      ? 'text-emerald-600 bg-emerald-50 border-emerald-200' 
+                      : 'text-slate-500 bg-slate-100 border-slate-200'
+                  }`}>
+                    {owner.verificationStatus?.toLowerCase() === 'approved' 
+                      ? 'Approved' 
+                      : (owner.verificationUrl ? (owner.verificationStatus === 'Pending' ? 'Active' : owner.verificationStatus) : 'Inactive')}
                   </span>
                 </div>
-                {owner.verificationUrl ? (
+                {owner.verificationStatus?.toLowerCase() === 'approved' ? (
+                  <div className="flex items-center gap-2">
+                    <div className="text-xs text-emerald-600 font-medium">Verification completed successfully.</div>
+                  </div>
+                ) : owner.verificationUrl ? (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md text-xs text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
                       {owner.verificationUrl}
@@ -699,6 +706,7 @@ export default function Step4BeneficialOwners() {
                           type="file"
                           id={`pow-${owner.shareholderId}`}
                           className="hidden"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                           onChange={(e) => handleUploadDocument(idx, "Proof of Wealth", e.target.files?.[0] || null)}
                           disabled={uploadingDocs[`${owner.shareholderId}-Proof of Wealth`]}
                         />
@@ -729,6 +737,7 @@ export default function Step4BeneficialOwners() {
                           type="file"
                           id={`poa-${owner.shareholderId}`}
                           className="hidden"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                           onChange={(e) => handleUploadDocument(idx, "Proof of Address", e.target.files?.[0] || null)}
                           disabled={uploadingDocs[`${owner.shareholderId}-Proof of Address`]}
                         />
@@ -842,7 +851,7 @@ export default function Step4BeneficialOwners() {
               <Select
                 isMulti
                 unstyled
-                classNames={getSelectClassNames(false)}
+                classNames={getSelectClassNames(false, missingFields.includes("roles"))}
                 options={[
                   { value: 'isShareholder', label: 'Shareholder' },
                   { value: 'isDirector', label: 'Director' },
@@ -861,6 +870,9 @@ export default function Step4BeneficialOwners() {
                     isDirector: selectedOptions.some(opt => opt.value === 'isDirector'),
                     isLegalRepresentative: selectedOptions.some(opt => opt.value === 'isLegalRepresentative')
                   }));
+                  if (selectedOptions.length > 0 && missingFields.includes("roles")) {
+                    setMissingFields(prev => prev.filter(f => f !== "roles"));
+                  }
                 }}
                 placeholder="Select roles..."
               />

@@ -154,7 +154,9 @@ export default function Step5DocumentsUpload() {
         await uploadShareholderDoc.mutateAsync(uploadFormData);
 
       if (registrationData?.rcNumber) {
-        const freshData = await lookupCompany.mutateAsync(registrationData.rcNumber);
+        const freshData = await lookupCompany.mutateAsync(
+          registrationData.rcNumber,
+        );
         if (freshData?.success && freshData.data) {
           setRegistrationData(freshData.data);
         } else if (updatedData) {
@@ -212,29 +214,32 @@ export default function Step5DocumentsUpload() {
   ) => {
     const documents = Array.isArray(owner.documents) ? owner.documents : [];
     const relevantDocuments = documents.filter((doc) => {
-      const typeName = `${doc.documentType || doc.documentTypeId || doc.type || doc.category || ""}`.toLowerCase();
+      const typeName =
+        `${doc.documentType || doc.documentTypeId || doc.type || doc.category || ""}`.toLowerCase();
       if (docType === "wealth") {
         return /wealth|source|identity/i.test(typeName);
       }
       return /address|residential/i.test(typeName);
     });
 
-    const pickValue = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+    const pickValue = (value: unknown) =>
+      typeof value === "string" && value.trim() ? value : undefined;
     const matchingDocument = relevantDocuments[0];
     const documentUrl = pickValue(
       matchingDocument?.url ||
-      matchingDocument?.fileUrl ||
-      matchingDocument?.documentUrl ||
-      matchingDocument?.downloadUrl ||
-      matchingDocument?.contentUrl ||
-      matchingDocument?.path ||
-      matchingDocument?.content,
+        matchingDocument?.fileUrl ||
+        matchingDocument?.documentUrl ||
+        matchingDocument?.downloadUrl ||
+        matchingDocument?.contentUrl ||
+        matchingDocument?.path ||
+        matchingDocument?.content,
     );
 
     if (documentUrl) return documentUrl;
 
     return docType === "wealth"
-      ? (pickValue(owner.proofOfWealthUrl) || pickValue(owner.identityDocumentUrl))
+      ? pickValue(owner.proofOfWealthUrl) ||
+          pickValue(owner.identityDocumentUrl)
       : pickValue(owner.proofOfAddressUrl);
   };
 
@@ -395,7 +400,9 @@ export default function Step5DocumentsUpload() {
       <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex-1 flex items-center justify-center gap-3">
           <div className="w-5 h-5 rounded-full border-2 border-[#185A9D] border-t-transparent animate-spin" />
-          <p className="text-slate-500 dark:text-slate-400">Loading document requirements...</p>
+          <p className="text-slate-500 dark:text-slate-400">
+            Loading document requirements...
+          </p>
         </div>
       </div>
     );
@@ -407,8 +414,10 @@ export default function Step5DocumentsUpload() {
   const amlPending = !selectedFiles[AML_DOC_ID] ? 1 : 0;
   const companyDocsPendingCount =
     amlPending + companyDocsAll.filter((doc) => !selectedFiles[doc.id]).length;
-  const shareholderDocsPendingCount = allShareholderDocs.filter(
-    (doc) => !doc.isVerificationLink && !doc.url,
+  const shareholderDocsPendingCount = allShareholderDocs.filter((doc) =>
+    doc.isVerificationLink
+      ? doc.verificationStatus?.toLowerCase() !== "approved"
+      : !doc.url,
   ).length;
 
   const pendingCount = companyDocsPendingCount + shareholderDocsPendingCount;
@@ -420,10 +429,12 @@ export default function Step5DocumentsUpload() {
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mt-6">
       {/* Tabs */}
       <div className="flex items-center gap-8 border-b border-slate-100 dark:border-slate-700 mb-8 pb-3">
-        {([
-          "Pending Actions", 
-        //  "In Review"
-        ] as Tab[]).map((tab) => {
+        {(
+          [
+            "Pending Actions",
+            //  "In Review"
+          ] as Tab[]
+        ).map((tab) => {
           const isActive = activeTab === tab;
           let count = 0;
           let Icon = MdOutlineAccessTime;
@@ -431,8 +442,8 @@ export default function Step5DocumentsUpload() {
           if (tab === "Pending Actions") {
             count = pendingCount;
             Icon = MdOutlineAccessTime;
-          } 
-          
+          }
+
           // else if (tab === "In Review") {
           //   count = inReviewCount;
           //   Icon = MdOutlineVisibility;
@@ -567,6 +578,7 @@ export default function Step5DocumentsUpload() {
                         type="file"
                         id={`doc-${docType.id}`}
                         className="hidden"
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                         onChange={(e) =>
                           handleFileChange(
                             docType.id,
@@ -691,8 +703,10 @@ export default function Step5DocumentsUpload() {
 
             {/* Business Owner Cards */}
             {groupedAllShareholders.map((owner) => {
-              const pendingDocs = owner.docs.filter(
-                (d) => !d.isVerificationLink && !d.url,
+              const pendingDocs = owner.docs.filter((d) =>
+                d.isVerificationLink
+                  ? d.verificationStatus?.toLowerCase() !== "approved"
+                  : !d.url,
               ).length;
               return (
                 <div key={owner.shareholderId}>
@@ -721,6 +735,8 @@ export default function Step5DocumentsUpload() {
                       if (doc.isVerificationLink) {
                         const hasLink = !!doc.verificationUrl;
                         const isWorking = verifyingId === doc.shareholderId;
+                        const isCompleted =
+                          doc.verificationStatus?.toLowerCase() === "approved";
                         return (
                           <div
                             key={`${doc.shareholderId}-verify-${idx}`}
@@ -728,9 +744,15 @@ export default function Step5DocumentsUpload() {
                           >
                             <div className="flex-1">
                               <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                                Identity Verification
+                                Identity Verification{" "}
+                                <span className="text-red-500">*</span>
                               </h4>
-                              {hasLink ? (
+                              {isCompleted ? (
+                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-md text-[10px] font-bold uppercase tracking-wid">
+                                  <MdCheckCircle className="w-4 h-4" />{" "}
+                                  VERIFICATION COMPLETED
+                                </div>
+                              ) : hasLink ? (
                                 <>
                                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
                                     Share this link with the beneficial owner to
@@ -776,7 +798,7 @@ export default function Step5DocumentsUpload() {
                               )}
                             </div>
                             <div className="shrink-0 flex flex-col gap-2 items-end">
-                              {!hasLink && (
+                              {!isCompleted && !hasLink && (
                                 <button
                                   onClick={() =>
                                     handleGenerateVerificationLink(
@@ -800,7 +822,7 @@ export default function Step5DocumentsUpload() {
                                 </button>
                               )}
                               {/* Open link in new tab (when exists) */}
-                              {hasLink && (
+                              {!isCompleted && hasLink && (
                                 <a
                                   href={doc.verificationUrl}
                                   target="_blank"
@@ -859,6 +881,7 @@ export default function Step5DocumentsUpload() {
                               type="file"
                               id={`sh-doc-${doc.shareholderId}-${doc.docType}`}
                               className="hidden"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                               onChange={(e) =>
                                 handleShareholderDocUpload(
                                   doc.shareholderId,

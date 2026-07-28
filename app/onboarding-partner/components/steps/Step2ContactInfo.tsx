@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useUpdateContactInfo, RegistrationInfo } from "@/app/hooks/use-onboarding";
-import { MdOutlineEmail, MdOutlinePhone, MdOutlineLocationOn, MdOutlinePublic, MdOutlineMap, MdOutlineSignpost } from "react-icons/md";
+import { MdOutlineEmail, MdOutlineLocationOn, MdOutlineMap, MdOutlineSignpost } from "react-icons/md";
 import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Select, { SingleValue, MultiValue, ActionMeta, ClassNamesConfig } from 'react-select';
