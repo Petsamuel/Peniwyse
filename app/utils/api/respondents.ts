@@ -128,7 +128,7 @@ export async function deleteDirector(directorId: string) {
 
 export async function deleteBeneficialOwner(shareholderId: string) {
   return apiClient(`api/respondents/shareholders/${shareholderId}`, {
-    method: "DELETE",
+    method: "POST",
   });
 }
 

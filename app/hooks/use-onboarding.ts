@@ -690,7 +690,7 @@ export function useDeleteBeneficialOwner() {
     return useMutation({
         mutationFn: async (shareholderId: string) => {
             const res = await apiClient(`api/respondents/shareholders/${shareholderId}`, {
-                method: 'DELETE'
+                method: 'POST'
             });
             if (res.hasErrors) throw new Error(res.message || 'Failed to delete beneficial owner');
             return res.data;
