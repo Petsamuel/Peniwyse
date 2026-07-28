@@ -686,6 +686,18 @@ export function useUpdateBeneficialOwners() {
     })
 }
 
+export function useDeleteBeneficialOwner() {
+    return useMutation({
+        mutationFn: async (shareholderId: string) => {
+            const res = await apiClient(`api/respondents/shareholders/${shareholderId}`, {
+                method: 'DELETE'
+            });
+            if (res.hasErrors) throw new Error(res.message || 'Failed to delete beneficial owner');
+            return res.data;
+        }
+    })
+}
+
 export function useCompleteBeneficialOwners() {
     return useMutation({
         mutationFn: async (companyId: string) => {

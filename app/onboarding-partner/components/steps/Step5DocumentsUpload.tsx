@@ -22,6 +22,8 @@ import {
   MdContentCopy,
   MdOutlineDownload,
   MdOutlineLink,
+  MdKeyboardArrowUp,
+  MdKeyboardArrowDown,
 } from "react-icons/md";
 import { uploadRespondentDocument } from "@/app/utils/api/respondents";
 import { useToast } from "@/app/hooks/use-toast";
@@ -87,6 +89,9 @@ export default function Step5DocumentsUpload() {
     Record<string, string>
   >({});
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [collapsedOwners, setCollapsedOwners] = useState<
+    Record<string, boolean>
+  >({});
 
   const mergeVerificationLink = (
     data: typeof registrationData,
@@ -708,13 +713,34 @@ export default function Step5DocumentsUpload() {
                   ? d.verificationStatus?.toLowerCase() !== "approved"
                   : !d.url,
               ).length;
+              const isCompleted = pendingDocs === 0;
+              const isCollapsed = isCompleted
+                ? (collapsedOwners[owner.shareholderId] ?? true)
+                : false;
+
               return (
                 <div key={owner.shareholderId}>
-                  <div className="flex items-center justify-between py-4">
+                  <div
+                    className={`flex items-center justify-between py-4 ${isCompleted ? "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg px-2 -mx-2 transition-colors" : ""}`}
+                    onClick={() => {
+                      if (isCompleted) {
+                        setCollapsedOwners((prev) => ({
+                          ...prev,
+                          [owner.shareholderId]: !isCollapsed,
+                        }));
+                      }
+                    }}
+                  >
                     <div className="flex items-center gap-3">
                       <MdOutlinePerson className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                      <h3 className="text-[17px] font-bold tracking-tight text-slate-900 dark:text-white">
+                      <h3 className="text-[17px] font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                         {owner.name}
+                        {isCompleted &&
+                          (isCollapsed ? (
+                            <MdKeyboardArrowDown className="w-5 h-5 text-slate-400" />
+                          ) : (
+                            <MdKeyboardArrowUp className="w-5 h-5 text-slate-400" />
+                          ))}
                       </h3>
                     </div>
                     {pendingDocs > 0 ? (
@@ -729,189 +755,197 @@ export default function Step5DocumentsUpload() {
                       </div>
                     )}
                   </div>
-                  <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                    {owner.docs.map((doc, idx) => {
-                      /* ── Identity Verification row ── */
-                      if (doc.isVerificationLink) {
-                        const hasLink = !!doc.verificationUrl;
-                        const isWorking = verifyingId === doc.shareholderId;
-                        const isCompleted =
-                          doc.verificationStatus?.toLowerCase() === "approved";
-                        return (
-                          <div
-                            key={`${doc.shareholderId}-verify-${idx}`}
-                            className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
-                          >
-                            <div className="flex-1">
-                              <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                                Identity Verification{" "}
-                                <span className="text-red-500">*</span>
-                              </h4>
-                              {isCompleted ? (
-                                <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 rounded-md text-[10px] font-bold uppercase tracking-wid">
-                                  <MdCheckCircle className="w-4 h-4" />{" "}
-                                  VERIFICATION COMPLETED
-                                </div>
-                              ) : hasLink ? (
-                                <>
-                                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                                    Share this link with the beneficial owner to
-                                    complete their identity verification.
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-2">
-                                    <div className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
-                                      {doc.verificationUrl}
-                                    </div>
-                                    <button
-                                      onClick={() =>
-                                        navigator.clipboard.writeText(
-                                          doc.verificationUrl || "",
-                                        )
-                                      }
-                                      className="p-2 text-slate-500 dark:text-slate-400 hover:text-[#185A9D] hover:bg-[#185A9D]/10 rounded-md transition-colors"
-                                      title="Copy link"
-                                    >
-                                      <MdContentCopy className="w-4 h-4" />
-                                    </button>
-                                    {/* Refresh link */}
-                                    <button
-                                      onClick={() =>
-                                        handleGenerateVerificationLink(
-                                          doc.shareholderId,
-                                        )
-                                      }
-                                      disabled={isWorking}
-                                      className="p-2 text-slate-500 dark:text-slate-400 hover:text-[#185A9D] hover:bg-[#185A9D]/10 rounded-md transition-colors disabled:opacity-50"
-                                      title="Regenerate link"
-                                    >
-                                      <MdRefresh
-                                        className={`w-4 h-4 ${isWorking ? "animate-spin" : ""}`}
-                                      />
-                                    </button>
-                                  </div>
-                                </>
-                              ) : (
-                                <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
-                                  No verification link yet. Click{" "}
-                                  <strong>Generate Link</strong> to create one.
-                                </p>
-                              )}
-                            </div>
-                            <div className="shrink-0 flex flex-col gap-2 items-end">
-                              {!isCompleted && !hasLink && (
-                                <button
-                                  onClick={() =>
-                                    handleGenerateVerificationLink(
-                                      doc.shareholderId,
-                                    )
-                                  }
-                                  disabled={isWorking}
-                                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg bg-[#185A9D] text-white hover:bg-[#124b86] transition-colors disabled:opacity-60"
-                                >
-                                  {isWorking ? (
-                                    <>
-                                      <MdRefresh className="w-[18px] h-[18px] animate-spin" />
-                                      Generating...
-                                    </>
+                  {!isCollapsed && (
+                    <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {owner.docs.map((doc, idx) => {
+                        /* ── Identity Verification row ── */
+                        if (doc.isVerificationLink) {
+                          const hasLink = !!doc.verificationUrl;
+                          const isWorking = verifyingId === doc.shareholderId;
+                          const isCompleted =
+                            doc.verificationStatus?.toLowerCase() ===
+                            "approved";
+                          return (
+                            <div
+                              key={`${doc.shareholderId}-verify-${idx}`}
+                              className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+                            >
+                              <div className="flex-1">
+                                <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
+                                  Identity Verification{" "}
+                                  {isCompleted ? (
+                                    <></>
                                   ) : (
-                                    <>
-                                      <MdOutlineLink className="w-[18px] h-[18px]" />
-                                      Generate Link
-                                    </>
+                                    <span className="text-red-500">*</span>
                                   )}
-                                </button>
-                              )}
-                              {/* Open link in new tab (when exists) */}
-                              {!isCompleted && hasLink && (
-                                <a
-                                  href={doc.verificationUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                                >
-                                  <MdOpenInNew className="w-[18px] h-[18px]" />
-                                  Verify Now
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      /* ── Upload row (Proof of Wealth / Proof of Address) ── */
-                      const isUploaded = !!doc.url;
-                      return (
-                        <div
-                          key={`${doc.shareholderId}-${doc.docType}-${idx}`}
-                          className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                          <div className="flex-1">
-                            <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                              {doc.docType}{" "}
-                              {!isUploaded && (
-                                <span className="text-red-500">*</span>
-                              )}
-                            </h4>
-                            {!isUploaded ? (
-                              <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
-                                Please provide the {doc.docType.toLowerCase()}{" "}
-                                for this business owner.
-                              </p>
-                            ) : (
-                              <div className="flex items-center gap-3 mt-1 text-sm">
-                                <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                  <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
-                                  Uploaded
-                                </span>
-                                {doc.url && (
+                                </h4>
+                                {isCompleted ? (
+                                  <div className="mt-1 inline-flex items-center gap-1.5  dark:bg-emerald-950/40 text-emerald-600 rounded-md text-[10px] font-bold uppercase tracking-wid">
+                                    <MdCheckCircle className="w-4 h-4" />{" "}
+                                    VERIFICATION COMPLETED
+                                  </div>
+                                ) : hasLink ? (
+                                  <>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                                      Share this link with the beneficial owner
+                                      to complete their identity verification.
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <div className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg text-xs text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis whitespace-nowrap">
+                                        {doc.verificationUrl}
+                                      </div>
+                                      <button
+                                        onClick={() =>
+                                          navigator.clipboard.writeText(
+                                            doc.verificationUrl || "",
+                                          )
+                                        }
+                                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-[#185A9D] hover:bg-[#185A9D]/10 rounded-md transition-colors"
+                                        title="Copy link"
+                                      >
+                                        <MdContentCopy className="w-4 h-4" />
+                                      </button>
+                                      {/* Refresh link */}
+                                      <button
+                                        onClick={() =>
+                                          handleGenerateVerificationLink(
+                                            doc.shareholderId,
+                                          )
+                                        }
+                                        disabled={isWorking}
+                                        className="p-2 text-slate-500 dark:text-slate-400 hover:text-[#185A9D] hover:bg-[#185A9D]/10 rounded-md transition-colors disabled:opacity-50"
+                                        title="Regenerate link"
+                                      >
+                                        <MdRefresh
+                                          className={`w-4 h-4 ${isWorking ? "animate-spin" : ""}`}
+                                        />
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
+                                    No verification link yet. Click{" "}
+                                    <strong>Generate Link</strong> to create
+                                    one.
+                                  </p>
+                                )}
+                              </div>
+                              <div className="shrink-0 flex flex-col gap-2 items-end">
+                                {!isCompleted && !hasLink && (
+                                  <button
+                                    onClick={() =>
+                                      handleGenerateVerificationLink(
+                                        doc.shareholderId,
+                                      )
+                                    }
+                                    disabled={isWorking}
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg bg-[#185A9D] text-white hover:bg-[#124b86] transition-colors disabled:opacity-60"
+                                  >
+                                    {isWorking ? (
+                                      <>
+                                        <MdRefresh className="w-[18px] h-[18px] animate-spin" />
+                                        Generating...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <MdOutlineLink className="w-[18px] h-[18px]" />
+                                        Generate Link
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                                {/* Open link in new tab (when exists) */}
+                                {!isCompleted && hasLink && (
                                   <a
-                                    href={doc.url}
+                                    href={doc.verificationUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-[#185A9D] hover:underline font-medium"
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                                   >
-                                    View Document
+                                    <MdOpenInNew className="w-[18px] h-[18px]" />
+                                    Verify Now
                                   </a>
                                 )}
                               </div>
-                            )}
-                          </div>
-                          <div className="shrink-0">
-                            <input
-                              type="file"
-                              id={`sh-doc-${doc.shareholderId}-${doc.docType}`}
-                              className="hidden"
-                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                              onChange={(e) =>
-                                handleShareholderDocUpload(
-                                  doc.shareholderId,
-                                  doc.docType,
-                                  e.target.files?.[0] || null,
-                                )
-                              }
-                            />
-                            <label
-                              htmlFor={`sh-doc-${doc.shareholderId}-${doc.docType}`}
-                              className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors ${
-                                !isUploaded
-                                  ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
-                                  : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
-                              }`}
-                            >
+                            </div>
+                          );
+                        }
+
+                        /* ── Upload row (Proof of Wealth / Proof of Address) ── */
+                        const isUploaded = !!doc.url;
+                        return (
+                          <div
+                            key={`${doc.shareholderId}-${doc.docType}-${idx}`}
+                            className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          >
+                            <div className="flex-1">
+                              <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
+                                {doc.docType}{" "}
+                                {!isUploaded && (
+                                  <span className="text-red-500">*</span>
+                                )}
+                              </h4>
                               {!isUploaded ? (
-                                <>
-                                  <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
-                                  Upload
-                                </>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
+                                  Please provide the {doc.docType.toLowerCase()}{" "}
+                                  for this business owner.
+                                </p>
                               ) : (
-                                "Change File"
+                                <div className="flex items-center gap-3 mt-1 text-sm">
+                                  <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                    <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
+                                    Uploaded
+                                  </span>
+                                  {doc.url && (
+                                    <a
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-[#185A9D] hover:underline font-medium"
+                                    >
+                                      View Document
+                                    </a>
+                                  )}
+                                </div>
                               )}
-                            </label>
+                            </div>
+                            <div className="shrink-0">
+                              <input
+                                type="file"
+                                id={`sh-doc-${doc.shareholderId}-${doc.docType}`}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                onChange={(e) =>
+                                  handleShareholderDocUpload(
+                                    doc.shareholderId,
+                                    doc.docType,
+                                    e.target.files?.[0] || null,
+                                  )
+                                }
+                              />
+                              <label
+                                htmlFor={`sh-doc-${doc.shareholderId}-${doc.docType}`}
+                                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors ${
+                                  !isUploaded
+                                    ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
+                                    : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
+                                }`}
+                              >
+                                {!isUploaded ? (
+                                  <>
+                                    <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
+                                    Upload
+                                  </>
+                                ) : (
+                                  "Change File"
+                                )}
+                              </label>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}

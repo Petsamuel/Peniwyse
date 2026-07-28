@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
-import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, useLookupCompany, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
+import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, useLookupCompany, useDeleteBeneficialOwner, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import { MdOutlinePerson, MdAdd, MdDelete, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
@@ -123,6 +123,7 @@ export default function Step4BeneficialOwners() {
   const verifyOwner = useVerifyBeneficialOwner();
   const uploadDocument = useUploadShareholderDocument();
   const lookupCompany = useLookupCompany();
+  const deleteOwner = useDeleteBeneficialOwner();
   const { info, error: showError, success, toasts, dismiss } = useToast();
   const [uploadingDocs, setUploadingDocs] = useState<Record<string, boolean>>({});
 
@@ -387,8 +388,21 @@ export default function Step4BeneficialOwners() {
     }
   };
 
-  const handleRemoveOwner = (index: number) => {
+  const handleRemoveOwner = async (index: number) => {
+    const owner = owners[index];
+    if (owner.shareholderId) {
+      try {
+        setIsSubmitting(true);
+        await deleteOwner.mutateAsync(owner.shareholderId);
+        success("Success", "Beneficial owner removed successfully.");
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : "Failed to remove beneficial owner.");
+        setIsSubmitting(false);
+        return;
+      }
+    }
     setOwners(prev => prev.filter((_, i) => i !== index));
+    setIsSubmitting(false);
   };
 
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null);
