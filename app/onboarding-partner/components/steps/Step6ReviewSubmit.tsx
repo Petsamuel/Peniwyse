@@ -1,15 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
-import { useSubmitRegistration } from "@/app/hooks/use-onboarding";
+import { useSubmitRegistration, useLookupCompany } from "@/app/hooks/use-onboarding";
 import { MdCheckCircle, MdErrorOutline, MdBusiness, MdOutlineContactPhone, MdInfoOutline, MdOutlinePeople } from "react-icons/md";
 
 export default function Step6ReviewSubmit() {
   const { goToPrevStep, registrationData, setRegistrationData, markStepCompleted } = useOnboardingPartner();
   const submitRegistration = useSubmitRegistration();
+  const lookupCompany = useLookupCompany();
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isFetching, setIsFetching] = useState(!!registrationData?.rcNumber);
+
+  useEffect(() => {
+    if (registrationData?.rcNumber) {
+      lookupCompany.mutateAsync(registrationData.rcNumber).then(res => {
+        if (res?.success && res.data) {
+          setRegistrationData(res.data);
+        }
+      }).catch(err => {
+        console.error("Failed to fetch fresh data for review", err);
+      }).finally(() => {
+        setIsFetching(false);
+      });
+    }
+  }, []);
 
   const handleSubmit = async () => {
     if (!registrationData?.companyId) {
@@ -70,8 +86,16 @@ export default function Step6ReviewSubmit() {
         </div>
       )}
 
-      <div className="flex-1 space-y-8 pb-8">
-        {/* Preview Sections */}
+      {isFetching ? (
+        <div className="flex justify-center py-12">
+          <svg className="animate-spin h-8 w-8 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      ) : (
+        <div className="flex-1 space-y-8 pb-8">
+          {/* Preview Sections */}
         {registrationData && (
           <div className="space-y-8 bg-transparent">
             {/* Basic Information */}
@@ -179,53 +203,33 @@ export default function Step6ReviewSubmit() {
           </div>
         )}
 
-        <div className="flex flex-col items-center justify-center text-center mt-12 pt-8">
-           <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4">
-             <MdCheckCircle className="w-8 h-8 text-accent" />
-           </div>
-           <h3 className="text-xl font-bold text-slate-800 mb-2">
-             {registrationData?.approvalStatus === "Rejected" ? "Ready to Resubmit" : "Ready to Submit"}
-           </h3>
-           <p className="text-slate-600 max-w-md">
-             {registrationData?.approvalStatus === "Rejected" 
-               ? "Please ensure you have addressed the feedback above. Click the button below to resubmit your application."
-               : "You have completed all necessary steps. Click the button below to submit your onboarding application."}
-           </p>
-           
-           {error && (
-              <div className="w-full max-w-md mt-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3 text-sm">
-                <MdErrorOutline className="w-5 h-5 shrink-0 mt-0.5" />
-                <div className="text-left">{error}</div>
-              </div>
-           )}
+        <div className="mt-8 flex justify-between border-t border-slate-100 pt-6">
+          <button
+              onClick={goToPrevStep}
+              disabled={submitRegistration.isPending}
+              className="px-8 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={submitRegistration.isPending}
+              className="flex items-center justify-center px-8 py-3 bg-accent hover:bg-accent-hover text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-70 min-w-[160px]"
+            >
+              {submitRegistration.isPending ? (
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : registrationData?.approvalStatus === "Rejected" ? (
+                "Resubmit Application"
+              ) : (
+                "Submit Application"
+              )}
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div className="mt-8 flex justify-between border-t border-slate-100 pt-6">
-        <button
-          onClick={goToPrevStep}
-          disabled={submitRegistration.isPending}
-          className="px-8 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50"
-        >
-          Back
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={submitRegistration.isPending}
-          className="flex items-center justify-center px-8 py-3 bg-accent hover:bg-accent-hover text-white font-bold rounded-xl transition-all active:scale-95 disabled:opacity-70 min-w-[160px]"
-        >
-          {submitRegistration.isPending ? (
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          ) : registrationData?.approvalStatus === "Rejected" ? (
-            "Resubmit Application"
-          ) : (
-            "Submit Application"
-          )}
-        </button>
-      </div>
+      )}
     </div>
   );
 }

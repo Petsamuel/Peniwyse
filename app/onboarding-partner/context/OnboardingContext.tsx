@@ -5,7 +5,7 @@ import { RegistrationInfo, useLookupCompany } from "../../hooks/use-onboarding";
 
 interface OnboardingContextProps {
   currentStep: number;
-  setCurrentStep: (step: number) => void;
+  setCurrentStep: Dispatch<SetStateAction<number>>;
   completedSteps: number[];
   markStepCompleted: (step: number) => void;
   markStepIncomplete: (step: number) => void;
@@ -19,8 +19,43 @@ interface OnboardingContextProps {
 
 const OnboardingContext = createContext<OnboardingContextProps | undefined>(undefined);
 
+const STEP_NAMES = [
+  "find-company",
+  "basic-info",
+  "contact-info",
+  "additional-details",
+  "beneficial-owners",
+  "documents-upload",
+  "review-submit"
+];
+
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStepState] = useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const step = params.get("step");
+      if (step) {
+        const stepIndex = STEP_NAMES.indexOf(step);
+        if (stepIndex !== -1) return stepIndex;
+        const numStep = Number(step);
+        if (!isNaN(numStep) && numStep >= 0 && numStep < STEP_NAMES.length) return numStep;
+      }
+    }
+    return 0;
+  });
+
+  const setCurrentStep = (step: number | ((prev: number) => number)) => {
+    setCurrentStepState((prev) => {
+      const nextStep = typeof step === 'function' ? step(prev) : step;
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("step", STEP_NAMES[nextStep] || nextStep.toString());
+        window.history.replaceState({}, '', url.toString());
+      }
+      return nextStep;
+    });
+  };
+
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<RegistrationInfo | null>(null);
