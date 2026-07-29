@@ -40,11 +40,11 @@ function applySecurityHeaders(response: NextResponse) {
     "Content-Security-Policy",
     [
       "default-src 'self'",
-      "script-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https:",
-      `connect-src 'self' https: `,
+      "connect-src 'self' https: ",
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
