@@ -35,6 +35,60 @@ function isAppUser(token: string) {
         return false
     }
 }
+function applySecurityHeaders(response: NextResponse) {
+  response.headers.set(
+    "Content-Security-Policy",
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https:",
+      "connect-src 'self' https://otc.etechnosoft.org https://file360-dev.digitvant.com https://file360.digitvant.com",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "upgrade-insecure-requests",
+    ].join("; ")
+  );
+
+  response.headers.set("X-Frame-Options", "same-origin");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  response.headers.set(
+    "Permissions-Policy",
+    "accelerometer=(), autoplay=(), camera=(), display-capture=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(self), usb=()"
+  );
+
+  response.headers.set(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains; preload"
+  );
+
+  response.headers.set(
+    "Cross-Origin-Opener-Policy",
+    "same-origin"
+  );
+
+  response.headers.set(
+    "Cross-Origin-Resource-Policy",
+    "same-origin"
+  );
+
+  return response;
+}
+
+function secureNext() {
+  return applySecurityHeaders(NextResponse.next());
+}
+
+function secureRedirect(url: URL) {
+  return applySecurityHeaders(NextResponse.redirect(url));
+}
 
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
@@ -50,7 +104,7 @@ export function proxy(request: NextRequest) {
     if (!isPublic && !hasToken) {
         const loginUrl = new URL('/login', request.url)
         loginUrl.searchParams.set('next', pathname)
-        return NextResponse.redirect(loginUrl)
+        return secureRedirect(loginUrl)
     }
  
     if (hasToken) {
@@ -58,25 +112,25 @@ export function proxy(request: NextRequest) {
             // Partner user
             if (isPublic) {
                 // Partner hitting /login -> send to onboarding
-                return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url))
+                return secureRedirect(new URL(ONBOARDING_PATH, request.url))
             } else if (!pathname.startsWith(ONBOARDING_PATH)) {
                 // Partner hitting any protected route EXCEPT onboarding -> send to onboarding
-                return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url))
+                return secureRedirect(new URL(ONBOARDING_PATH, request.url))
             }
         } else {
             // Internal/Admin user
             if (isPublic) {
                 // Internal user hitting /login -> send to dashboard
-                return NextResponse.redirect(new URL('/dashboard', request.url))
+                return secureRedirect(new URL('/dashboard', request.url))
             }
             if (pathname.startsWith(ONBOARDING_PATH)) {
                 // Internal user shouldn't be in onboarding -> send to dashboard
-                return NextResponse.redirect(new URL('/dashboard', request.url))
+                return secureRedirect(new URL('/dashboard', request.url))
             }
         }
     }
 
-    return NextResponse.next()
+    return secureNext()
 }
 
 export const config = {
