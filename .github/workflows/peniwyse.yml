@@ -1,0 +1,297 @@
+# GitHub recommends pinning actions to a commit SHA.
+# To get a newer version, you will need to update the SHA.
+# You can also reference a tag or branch, but the action may change without warning..
+
+name: build and deploy container app to Web App - peniwyse-service
+on:
+  push:
+    branches:
+      - hw-dev-cred
+      - hw-staging
+      - hw-prod
+    paths-ignore:
+      - deployment.yaml
+  pull_request:
+    branches:
+      - hw-staging
+      - hw-prod
+    paths-ignore:
+      - deployment.yaml
+  workflow_dispatch:
+
+jobs:
+  Build:
+    name: Build
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+  Deploy-to-Dev:
+    if: github.ref == 'refs/heads/hw-dev-cred'
+    name: Deploy-to-Dev
+    runs-on: ubuntu-latest
+    needs: Build
+    environment: 
+     name: hw-dev-cred
+     url: https://peniwyse-dev.digitvant.com
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Log in to Huawei Cloud SWR
+      uses: huaweicloud/swr-login@v2.1.0
+      with:
+        access-key-id: ${{ secrets.HW_ACCESS_KEY }}   # Must have created a github secrets containing the access key.
+        access-key-secret: ${{ secrets.HW_SECRET_KEY }}   # Must have created a github secrets containing the secret key
+        region: af-south-1
+
+
+    - name: Build and push Docker image
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+          --build-arg NEXT_PUBLIC_API_V2_URL="${{ vars.NEXT_PUBLIC_API_V2_URL }}" \
+          --build-arg NEXT_PUBLIC_SSO_URL="${{ vars.NEXT_PUBLIC_SSO_URL }}" \
+          --build-arg NEXT_PUBLIC_BASE_PROFILE_API="${{ vars.NEXT_PUBLIC_BASE_PROFILE_API }}" \
+          --build-arg NEXT_PUBLIC_ACCOUNT_API_URL="${{ vars.NEXT_PUBLIC_ACCOUNT_API_URL }}" \
+          --build-arg NEXT_PUBLIC_CREDPAY_SWITCH_API_URL="${{ vars.NEXT_PUBLIC_CREDPAY_SWITCH_API_URL }}" \
+          --build-arg NEXT_PUBLIC_VAS_API_URL="${{ vars.NEXT_PUBLIC_VAS_API_URL }}" \
+          --build-arg NEXT_PUBLIC_COOKIE_DOMAIN="${{ vars.NEXT_PUBLIC_COOKIE_DOMAIN }}" \
+          --build-arg NEXT_PUBLIC_SSO_CLIENT_ID="${{ vars.NEXT_PUBLIC_SSO_CLIENT_ID }}" \
+          --build-arg NEXT_PUBLIC_DIGIT_SCHOOL_URL="${{ vars.NEXT_PUBLIC_DIGIT_SCHOOL_URL }}" \
+          --build-arg NEXT_PUBLIC_SSO_CLIENT_SECRET="${{ vars.NEXT_PUBLIC_SSO_CLIENT_SECRET }}" \
+          --build-arg NEXT_KOLO_SAVING_BASE_URL="${{ vars.NEXT_KOLO_SAVING_BASE_URL }}" \
+          --build-arg NEXT_PUBLIC_POSTBRIDGE_API_URL="${{ vars.NEXT_PUBLIC_POSTBRIDGE_API_URL }}" \
+          --build-arg NEXT_PUBLIC_APP_KYC_PROFILE="${{ vars.NEXT_PUBLIC_APP_KYC_PROFILE }}" \
+          --build-arg NEXT_PUBLIC_BASE_API_URL="${{ vars.NEXT_PUBLIC_BASE_API_URL }}" \
+          -t swr.af-south-1.myhuaweicloud.com/cred-dev/peniwyse-service:${{ github.sha }} \
+          --push .
+    
+    - name: Configure kubectl for Huawei Cloud CCE    ##Must have created a github secrets containing the kubeconfig
+      run: |
+        sudo mkdir -p $HOME/.kube
+        sudo chown -R runner:runner $HOME/.kube
+        export KUBECONFIG=$HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA }}" > $KUBECONFIG    
+    - name: Update deployment
+      run: |    # Updates the deployment.yaml to you the latest  build
+        sed -i "s@swr.af-south-1.myhuaweicloud.com/cred-dev/peniwyse-service:[a-z0-9]*@swr.af-south-1.myhuaweicloud.com/cred-dev/peniwyse-service:${{ github.sha }}@g" deployment.yaml    
+
+    - name: Deploy to Huawei CCE
+      run: |    # Run your kubectl commands here
+        kubectl apply -f deployment.yaml
+
+  notification:
+    name: Notify to Teams
+    runs-on: ubuntu-latest
+    needs: Deploy-to-Dev
+    steps:
+      - name: Notify Microsoft Teams
+        if: always()
+        run: |
+          curl -H 'Content-Type: application/json' \
+            -d '{
+                  "@type": "MessageCard",
+                  "@context": "http://schema.org/extensions",
+                  "summary": "Deployment Notification",
+                  "themeColor": "0076D7",
+                  "sections": [{
+                    "activityTitle": "🚀 Deployment Status: '${{ needs.Deploy-to-Dev.result }}'",
+                    "facts": [
+                      { "name": "Repository", "value": "${{ github.repository }}" },
+                      { "name": "Actor", "value": "${{ github.actor }}" },
+                      { "name": "Branch", "value": "${{ github.ref_name }}" },
+                      { "name": "Commit Message", "value": "${{ github.event.head_commit.message }}" },
+                      { "name": "Commit", "value": "[View Commit](${{ github.event.head_commit.url }})" }
+                    ],
+                    "markdown": true
+                  }]
+                }' \
+            ${{ secrets.MSTEAMS_WEBHOOK }}
+          
+  if_failure:
+    name: Only if failure
+    runs-on: ubuntu-latest
+    needs: Deploy-to-Dev
+    steps:
+      - uses: actions/checkout@master
+      - name: Microsoft Teams Notification
+        uses: skitionek/notify-microsoft-teams@master
+        if: failure()
+        with:
+          webhook_url: ${{ secrets.MSTEAMS_WEBHOOK }}
+
+  manual-approval-staging:
+    if: github.ref == 'refs/heads/hw-staging'
+    name: Manual Approval to staging
+    runs-on: ubuntu-latest
+    needs: Build
+    #if: success() # Only proceed if terraform-plan job succeeds
+    
+    permissions:
+      issues: write
+
+    steps:
+      - name: Await Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: "Superseun99,supermanng" # Replace with GitHub usernames, with the free version you can only have an issue assigned to one username
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required to staging"
+          issue-body: "Please approve or deny the deployment."
+
+  Deploy-to-staging:
+    if: github.ref == 'refs/heads/hw-staging'
+    name: Deploy-to-staging
+    runs-on: ubuntu-latest
+    needs: manual-approval-staging
+    environment: 
+      name: hw-staging
+      url: https://peniwyse-staging.digitvant.com
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Log in to Huawei Cloud SWR
+      uses: huaweicloud/swr-login@v2.1.0
+      with:
+        access-key-id: ${{ secrets.HW_ACCESS_KEY }}   # Must have created a github secrets containing the access key
+        access-key-secret: ${{ secrets.HW_SECRET_KEY }}   # Must have created a github secrets containing the secret key
+        region: af-south-1
+
+    - name: Build and push Docker image
+      run: |
+        docker build \
+          --build-arg NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL}} \
+          --build-arg NEXT_PUBLIC_API_V2_URL=${{ vars.NEXT_PUBLIC_API_V2_URL}} \
+          --build-arg NEXT_PUBLIC_SSO_URL=${{ vars.NEXT_PUBLIC_SSO_URL}} \
+          --build-arg NEXT_PUBLIC_BASE_PROFILE_API=${{ vars.NEXT_PUBLIC_BASE_PROFILE_API }} \
+          --build-arg NEXT_PUBLIC_ACCOUNT_API_URL=${{ vars.NEXT_PUBLIC_ACCOUNT_API_URL }} \
+          --build-arg NEXT_PUBLIC_CRM_DASHBOARD_URL=${{ vars.NEXT_PUBLIC_CRM_DASHBOARD_URL }} \
+          --build-arg NEXT_PUBLIC_CRM_LOGIN_URL=${{ vars.NEXT_PUBLIC_CRM_LOGIN_URL}} \
+          --build-arg NEXT_PUBLIC_COOKIE_DOMAIN=${{ vars.NEXT_PUBLIC_COOKIE_DOMAIN }} \
+          -t swr.af-south-1.myhuaweicloud.com/cred-staging/peniwyse-service:${{ github.sha }} .
+        docker push swr.af-south-1.myhuaweicloud.com/cred-staging/peniwyse-service:${{ github.sha }}
+
+    - name: Configure kubectl for Huawei Cloud CCE    ##Must have created a github secrets containing the kubeconfig
+      run: |
+        sudo mkdir -p $HOME/.kube
+        sudo chown -R runner:runner $HOME/.kube
+        export KUBECONFIG=$HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA2 }}" > $KUBECONFIG    
+    - name: Update deployment
+      run: |    # Updates the deployment.yaml to you the latest  build
+        sed -i "s@swr.af-south-1.myhuaweicloud.com/cred-staging/peniwyse-service:[a-z0-9]*@swr.af-south-1.myhuaweicloud.com/cred-staging/peniwyse-service:${{ github.sha }}@g" deployment.yaml    
+
+
+    - name: Debugging
+      run: |
+        kubectl version
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Deploy to Huawei CCE
+      run: |    # Run your kubectl commands here
+        kubectl apply -f deployment.yaml
+
+  manual-approval-prod:
+    if: github.ref == 'refs/heads/hw-prod'
+    name: Manual Approval to Prod
+    runs-on: ubuntu-latest
+    needs: Build
+   # if: success() # Only proceed if terraform-plan job succeeds
+    
+    permissions:
+      issues: write
+
+    steps:
+      - name: Await Manual Approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: "Superseun99,supermanng" # Replace with GitHub usernames, with the free version you can only have an issue assigned to one username
+          minimum-approvals: 1
+          issue-title: "Manual Approval Required to Prod"
+          issue-body: "Please approve or deny the deployment."
+
+
+  Deploy-to-prod:
+    if: github.ref == 'refs/heads/hw-prod'
+    name: Deploy-to-Prod
+    runs-on: ubuntu-latest
+    needs: manual-approval-prod
+    environment: 
+      name: prod
+      url: https://fastsupport-v1.digitvant.com
+    
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Log in to Huawei Cloud SWR
+      uses: huaweicloud/swr-login@v2.1.0
+      with:
+        access-key-id: ${{ secrets.HW_ACCESS_KEY }}   # Must have created a github secrets containing the access key
+        access-key-secret: ${{ secrets.HW_SECRET_KEY }}   # Must have created a github secrets containing the secret key
+        region: af-south-1
+
+    - name: Build and push Docker image
+      run: |
+        docker buildx build \
+          --platform linux/amd64 \
+          --provenance=false \
+          --build-arg NEXT_PUBLIC_API_URL="${{ vars.NEXT_PUBLIC_API_URL }}" \
+          --build-arg NEXT_PUBLIC_API_V2_URL="${{ vars.NEXT_PUBLIC_API_V2_URL }}" \
+          --build-arg NEXT_PUBLIC_SSO_URL="${{ vars.NEXT_PUBLIC_SSO_URL }}" \
+          --build-arg NEXT_PUBLIC_BASE_PROFILE_API="${{ vars.NEXT_PUBLIC_BASE_PROFILE_API }}" \
+          --build-arg NEXT_PUBLIC_ACCOUNT_API_URL="${{ vars.NEXT_PUBLIC_ACCOUNT_API_URL }}" \
+          --build-arg NEXT_PUBLIC_CREDPAY_SWITCH_API_URL="${{ vars.NEXT_PUBLIC_CREDPAY_SWITCH_API_URL }}" \
+          --build-arg NEXT_PUBLIC_VAS_API_URL="${{ vars.NEXT_PUBLIC_VAS_API_URL }}" \
+          --build-arg NEXT_PUBLIC_COOKIE_DOMAIN="${{ vars.NEXT_PUBLIC_COOKIE_DOMAIN }}" \
+          --build-arg NEXT_PUBLIC_SSO_CLIENT_ID="${{ vars.NEXT_PUBLIC_SSO_CLIENT_ID }}" \
+          --build-arg NEXT_PUBLIC_DIGIT_SCHOOL_URL="${{ vars.NEXT_PUBLIC_DIGIT_SCHOOL_URL }}" \
+          --build-arg NEXT_PUBLIC_SSO_CLIENT_SECRET="${{ vars.NEXT_PUBLIC_SSO_CLIENT_SECRET }}" \
+          --build-arg NEXT_KOLO_SAVING_BASE_URL="${{ vars.NEXT_KOLO_SAVING_BASE_URL }}" \
+          --build-arg NEXT_PUBLIC_POSTBRIDGE_API_URL="${{ vars.NEXT_PUBLIC_POSTBRIDGE_API_URL }}" \
+          --build-arg NEXT_PUBLIC_APP_KYC_PROFILE="${{ vars.NEXT_PUBLIC_APP_KYC_PROFILE }}" \
+          --build-arg NEXT_PUBLIC_BASE_API_URL="${{ vars.NEXT_PUBLIC_BASE_API_URL }}" \
+          -t swr.af-south-1.myhuaweicloud.com/cred-prod/peniwyse-service:${{ github.sha }} \
+          --push .
+
+    - name: Configure kubectl for Huawei Cloud CCE    ##Must have created a github secrets containing the kubeconfig
+      run: |
+        sudo mkdir -p $HOME/.kube
+        sudo chown -R runner:runner $HOME/.kube
+        export KUBECONFIG=$HOME/.kube/config
+        echo "${{ secrets.KUBE_CONFIG_DATA2 }}" > $KUBECONFIG    
+    - name: Update deployment
+      run: |    # Updates the deployment.yaml to you the latest  build
+        sed -i "s@swr.af-south-1.myhuaweicloud.com/cred-prod/peniwyse-service:[a-z0-9]*@swr.af-south-1.myhuaweicloud.com/cred-prod/peniwyse-service:${{ github.sha }}@g" deployment-prod.yaml    
+
+
+    - name: Debugging
+      run: |
+        kubectl version
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Deploy to Huawei CCE
+      run: |    # Run your kubectl commands here
+
+        kubectl apply -f deployment-prod.yaml
