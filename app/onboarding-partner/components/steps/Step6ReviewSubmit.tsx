@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useSubmitRegistration } from "@/app/hooks/use-onboarding";
-import { MdCheckCircle, MdErrorOutline, MdBusiness, MdOutlineContactPhone, MdInfoOutline } from "react-icons/md";
+import { MdCheckCircle, MdErrorOutline, MdBusiness, MdOutlineContactPhone, MdInfoOutline, MdOutlinePeople } from "react-icons/md";
 
 export default function Step6ReviewSubmit() {
   const { goToPrevStep, registrationData, setRegistrationData, markStepCompleted } = useOnboardingPartner();
@@ -135,6 +135,47 @@ export default function Step6ReviewSubmit() {
                 <span className="font-medium text-slate-800">{registrationData.businessDescription || "N/A"}</span>
               </div>
             </div>
+
+            {/* Beneficial Owners */}
+            {registrationData.beneficialOwners && registrationData.beneficialOwners.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
+                  <MdOutlinePeople className="text-accent" /> Beneficial Owners
+                </h3>
+                <div className="space-y-4">
+                  {registrationData.beneficialOwners.map((owner, idx) => (
+                    <div key={idx} className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <span className="text-slate-500 block">Name</span>
+                          <span className="font-medium text-slate-800">{String(owner.firstName || "")} {String(owner.lastName || "")}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Email</span>
+                          <span className="font-medium text-slate-800">{String(owner.email || "N/A")}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Ownership Percentage</span>
+                          <span className="font-medium text-slate-800">{owner.ownershipPercentage !== undefined ? String(owner.ownershipPercentage) + "%" : "N/A"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Verification Status</span>
+                          <span className="font-medium text-slate-800">{String(owner.verificationStatus || "Pending")}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Proof of Wealth</span>
+                          <span className="font-medium text-slate-800">{String(owner.proofOfWealthStatus || "Pending Upload")}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Proof of Address</span>
+                          <span className="font-medium text-slate-800">{String(owner.proofOfAddressStatus || "Pending Upload")}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

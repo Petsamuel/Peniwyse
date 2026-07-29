@@ -55,7 +55,7 @@ export async function apiClient(
       clearClientToken();
       
       // Do not redirect if we are already on a public path
-      const publicPaths = ['/login', '/tradingpartner-form', '/invite'];
+      const publicPaths = ['/login', '/tradingpartner-form', '/invite', '/onboarding-partner'];
       const isPublicPath = publicPaths.some(p => window.location.pathname.startsWith(p));
       
       if (!isPublicPath) {

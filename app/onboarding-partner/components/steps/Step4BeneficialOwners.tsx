@@ -480,6 +480,11 @@ export default function Step4BeneficialOwners() {
       return;
     }
 
+    if (totalPercentage !== 100) {
+      setError(`Total ownership percentage must equal exactly 100%. Currently it is ${totalPercentage}%.`);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError("");

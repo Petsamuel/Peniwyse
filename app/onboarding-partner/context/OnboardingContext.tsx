@@ -56,7 +56,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const goToPrevStep = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
   return (
