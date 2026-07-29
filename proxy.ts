@@ -44,7 +44,7 @@ function applySecurityHeaders(response: NextResponse) {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https:",
-      "connect-src 'self' https://otc.etechnosoft.org https://file360-dev.digitvant.com https://file360.digitvant.com",
+      `connect-src 'self' https: `,
       "media-src 'self' blob:",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",
