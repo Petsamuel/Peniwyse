@@ -6,7 +6,7 @@ import { MdOutlineBusinessCenter, MdSearch, MdArrowForward, MdOutlineAddBusiness
 import { useLookupCompany, useStartRegistration, RegistrationInfo } from "@/app/hooks/use-onboarding";
 
 export default function Step0FindCompany() {
-  const { setCurrentStep, setCompanyId, setRegistrationData } = useOnboardingPartner();
+  const { setCurrentStep, setCompanyId, setRegistrationData, jumpToRejectedDocuments } = useOnboardingPartner();
   const lookupCompany = useLookupCompany();
   const startRegistration = useStartRegistration();
 
@@ -39,8 +39,12 @@ export default function Step0FindCompany() {
         else if (!data?.documentsCompleted) targetStep = 5;
         else targetStep = 6;
 
-        // Small delay to show the "found" state before transitioning
-        setTimeout(() => setCurrentStep(targetStep), 800);
+        // Small delay to show the "found" state before transitioning.
+        // A rejected document outranks the "next incomplete step" guess — the
+        // application looks complete, but the partner has work waiting on step 5.
+        setTimeout(() => {
+          if (!jumpToRejectedDocuments(data)) setCurrentStep(targetStep);
+        }, 800);
       } else {
         setSearchStatus("not_found");
       }

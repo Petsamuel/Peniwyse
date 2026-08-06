@@ -11,14 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-
-const PUBLIC_PATHS = ['/login', '/tradingpartner-form', '/invite'];
+import { isPublicPath } from "@/app/utils/auth-routing";
 
 export function AutoLogoutHandler() {
   const pathname = usePathname();
-  const isPublicPath = PUBLIC_PATHS.some((p) => pathname?.startsWith(p));
 
-  if (isPublicPath) {
+  if (isPublicPath(pathname ?? "")) {
     return null;
   }
 

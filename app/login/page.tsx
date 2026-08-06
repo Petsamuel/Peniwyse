@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { usePartnerLogin } from "@/app/hooks/use-onboarding";
@@ -9,6 +9,9 @@ import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import Link from "next/link";
 import { Mascot } from "@/app/components/mascot";
+import Loader from "@/app/components/loader";
+import { getClientToken } from "@/app/utils/auth";
+import { resolveAuthedDestination } from "@/app/utils/auth-routing";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +23,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // A signed-in user must never see this form — including when they land here
+  // with the back button, where the page can be restored from the back/forward
+  // cache and no server request (and so no proxy redirect) happens at all.
+  useEffect(() => {
+    const leaveIfSignedIn = () => {
+      const token = getClientToken();
+      if (!token) {
+        setCheckingSession(false);
+        return;
+      }
+      const next = new URLSearchParams(window.location.search).get("next");
+      // Full navigation rather than router.replace: the client router cache can
+      // still be holding this very page, and `replace` keeps the login entry out
+      // of history so the next back press skips it too.
+      window.location.replace(resolveAuthedDestination(token, next));
+    };
+
+    leaveIfSignedIn();
+
+    // Effects do not re-run on a bfcache restore — `pageshow` is the only signal.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) leaveIfSignedIn();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   let displayError = "";
   if (error) {
@@ -61,7 +92,11 @@ export default function LoginPage() {
               }
               refreshFromToken();
               success("Login Successful", "You will be redirected shortly.");
-              router.replace("/onboarding-partner");
+              const next = new URLSearchParams(window.location.search).get(
+                "next",
+              );
+              // `replace`, so the login page is dropped from history entirely.
+              router.replace(resolveAuthedDestination(token, next));
             });
           } else {
             success("Login Successful", "You will be redirected shortly.");
@@ -87,6 +122,12 @@ export default function LoginPage() {
       },
     );
   };
+
+  // Held until the session check resolves so an already-signed-in user never
+  // sees the form flash before being sent on.
+  if (checkingSession) {
+    return <Loader />;
+  }
 
   return (
     <div className="min-h-screen relative bg-[#f8fafc] font-montserrat flex items-center justify-center p-6 lg:p-12 overflow-hidden">

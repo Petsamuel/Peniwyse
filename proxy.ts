@@ -1,40 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import {
+    ONBOARDING_PATH,
+    isInternalUser,
+    isPublicPath,
+    resolveAuthedDestination,
+} from '@/app/utils/auth-routing'
 
-const PUBLIC_PATHS = ['/login', '/tradingpartner-form', '/invite']
-const ONBOARDING_PATH = '/onboarding-partner'
-
-function isAppUser(token: string) {
-    try {
-        const base64Url = token.split('.')[1]
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-        }).join(''))
-        const payload = JSON.parse(jsonPayload)
-        
-        const userType = (payload.UserType as string | undefined)?.toLowerCase()
-        const validRoles = [
-            'approver', 'initiator', 'super admin', 'superadmin',
-            'compliance', 'audit', 'treasurer', 'treasurer team',
-            'marketers', 'marketer', 'business head', 'business team'
-        ]
-        if (userType && validRoles.includes(userType)) return true
-
-        const roles: string[] = Array.isArray(payload.role)
-            ? payload.role.map((r: string) => r.toLowerCase())
-            : typeof payload.role === 'string'
-                ? [payload.role.toLowerCase()]
-                : []
-                
-        const validRoleSet = new Set([...validRoles, 'kyc_approver', 'kyc_initiator'])
-        if (roles.some(r => validRoleSet.has(r))) return true
-
-        return false
-    } catch (e) {
-        return false
-    }
-}
 function applySecurityHeaders(response: NextResponse) {
   response.headers.set(
     "Content-Security-Policy",
@@ -79,6 +51,16 @@ function applySecurityHeaders(response: NextResponse) {
     "same-origin"
   );
 
+  // Auth state is decided per request, so no page may be replayed from a
+  // history/back-forward cache. Without this the browser can restore the login
+  // page after a successful sign-in (or a protected page after logout) without
+  // ever asking the server, so none of the redirects below get a chance to run.
+  response.headers.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, max-age=0"
+  );
+  response.headers.set("Pragma", "no-cache");
+
   return response;
 }
 
@@ -91,14 +73,14 @@ function secureRedirect(url: URL) {
 }
 
 export function proxy(request: NextRequest) {
-    const { pathname } = request.nextUrl
+    const { pathname, search } = request.nextUrl
 
-    const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+    const isPublic = isPublicPath(pathname)
     const tokenCookie = request.cookies.get('peniwyse_token')
     const hasToken = !!tokenCookie
-    
+
     // Check if user is an admin/internal user or just an onboarding partner
-    const isInternalUser = hasToken ? isAppUser(tokenCookie.value) : false
+    const isInternal = hasToken ? isInternalUser(tokenCookie.value) : false
 
     // Unauthenticated user hitting a protected route → redirect to login
     if (!isPublic && !hasToken) {
@@ -106,27 +88,25 @@ export function proxy(request: NextRequest) {
         loginUrl.searchParams.set('next', pathname)
         return secureRedirect(loginUrl)
     }
- 
+
     if (hasToken) {
-        if (!isInternalUser) {
-            // Partner user
-            if (isPublic) {
-                // Partner hitting /login -> send to onboarding
-                return secureRedirect(new URL(ONBOARDING_PATH, request.url))
-            } else if (!pathname.startsWith(ONBOARDING_PATH)) {
-                // Partner hitting any protected route EXCEPT onboarding -> send to onboarding
-                return secureRedirect(new URL(ONBOARDING_PATH, request.url))
-            }
-        } else {
-            // Internal/Admin user
-            if (isPublic) {
-                // Internal user hitting /login -> send to dashboard
-                return secureRedirect(new URL('/dashboard', request.url))
-            }
-            if (pathname.startsWith(ONBOARDING_PATH)) {
-                // Internal user shouldn't be in onboarding -> send to dashboard
-                return secureRedirect(new URL('/dashboard', request.url))
-            }
+        if (isPublic) {
+            // Already signed in — never show a public/auth page again. Honour the
+            // `next` hint the login redirect carried so back/forward lands somewhere
+            // useful instead of on the login form.
+            const next = new URLSearchParams(search).get('next')
+            const destination = resolveAuthedDestination(tokenCookie.value, next)
+            return secureRedirect(new URL(destination, request.url))
+        }
+
+        if (!isInternal && !pathname.startsWith(ONBOARDING_PATH)) {
+            // Partner hitting any protected route EXCEPT onboarding -> send to onboarding
+            return secureRedirect(new URL(ONBOARDING_PATH, request.url))
+        }
+
+        if (isInternal && pathname.startsWith(ONBOARDING_PATH)) {
+            // Internal user shouldn't be in onboarding -> send to dashboard
+            return secureRedirect(new URL('/dashboard', request.url))
         }
     }
 

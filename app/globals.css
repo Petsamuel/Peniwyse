@@ -58,6 +58,31 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+/* react-phone-number-input renders a nested <input> inside its wrapper. The
+   wrapper is the element we style with a border and focus ring, so the inner
+   control must not draw one of its own — otherwise it reads as a double border. */
+.PhoneInput .PhoneInputInput {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+
+.PhoneInput .PhoneInputInput:focus,
+.PhoneInput .PhoneInputInput:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.PhoneInput .PhoneInputInput::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 /* Custom Scrollbar for premium look */
 ::-webkit-scrollbar {
   width: 5px;

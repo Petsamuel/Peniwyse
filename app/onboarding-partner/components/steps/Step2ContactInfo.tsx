@@ -7,6 +7,7 @@ import { MdOutlineEmail, MdOutlineLocationOn, MdOutlineMap, MdOutlineSignpost } 
 import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Select, { SingleValue, MultiValue, ActionMeta, ClassNamesConfig } from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { Country, State, City } from 'country-state-city';
 import * as Flags from 'country-flag-icons/react/3x2';
 
@@ -154,8 +155,13 @@ export default function Step2ContactInfo() {
     }));
   }, [opCountryIsoCode, opStateIsoCode]);
 
-  const selectedCityOption = cityOptions.find(o => o.value === formData.city) || null;
-  const selectedOpCityOption = opCityOptions.find(o => o.value === formData.operatingCity) || null;
+  // A typed-in city won't be in the reference list, so fall back to the raw
+  // value — otherwise it would disappear from the field on the way back here.
+  const toCityOption = (value: string, options: OptionType[]) =>
+    value ? options.find(o => o.value === value) || { value, label: value } : null;
+
+  const selectedCityOption = toCityOption(formData.city, cityOptions);
+  const selectedOpCityOption = toCityOption(formData.operatingCity, opCityOptions);
 
   const handleCountryChange = (
     newValue: SingleValue<OptionType> | MultiValue<OptionType>,
@@ -388,14 +394,15 @@ export default function Step2ContactInfo() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">City</label>
-            <Select
+            <CreatableSelect
               unstyled
               classNames={getSelectClassNames(false, missingFields.includes("city"))}
               options={cityOptions}
               value={selectedCityOption}
               onChange={handleCityChange}
-              placeholder={stateIsoCode ? "Select City" : "Select State first"}
-              isDisabled={!stateIsoCode}
+              placeholder={formData.state ? "Select or type your city" : "Select State first"}
+              isDisabled={!formData.state}
+              formatCreateLabel={(input) => `Use "${input}"`}
               isClearable
               isSearchable
             />
@@ -510,14 +517,15 @@ export default function Step2ContactInfo() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating City</label>
-                  <Select
+                  <CreatableSelect
                     unstyled
                     classNames={getSelectClassNames(false, missingFields.includes("operatingCity"))}
                     options={opCityOptions}
                     value={selectedOpCityOption}
                     onChange={(val, meta) => handleCityChange(val, meta, true)}
-                    placeholder={opStateIsoCode ? "Select City" : "Select State first"}
-                    isDisabled={!opStateIsoCode}
+                    placeholder={formData.operatingState ? "Select or type your city" : "Select State first"}
+                    isDisabled={!formData.operatingState}
+                    formatCreateLabel={(input) => `Use "${input}"`}
                     isClearable
                     isSearchable
                   />

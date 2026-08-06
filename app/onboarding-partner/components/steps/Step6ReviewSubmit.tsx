@@ -1,12 +1,166 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useSubmitRegistration, useLookupCompany } from "@/app/hooks/use-onboarding";
-import { MdCheckCircle, MdErrorOutline, MdBusiness, MdOutlineContactPhone, MdInfoOutline, MdOutlinePeople } from "react-icons/md";
+import {
+  MdCheckCircle,
+  MdErrorOutline,
+  MdBusiness,
+  MdOutlineContactPhone,
+  MdInfoOutline,
+  MdOutlinePeople,
+  MdOutlineDescription,
+  MdEdit,
+} from "react-icons/md";
+import { normalizeReviewStatus } from "../../utils/document-review";
+
+type Row = Record<string, unknown>;
+
+/** Reads the first non-empty value among aliases — the API is not consistent about names. */
+function pick(source: Row | null | undefined, ...keys: string[]) {
+  if (!source) return undefined;
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && !Number.isNaN(value)) return String(value);
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+  }
+  return undefined;
+}
+
+function pickList(source: Row | null | undefined, ...keys: string[]): string[] {
+  if (!source) return [];
+  for (const key of keys) {
+    const value = source[key];
+    if (Array.isArray(value) && value.length > 0) {
+      return value.map((item) => String(item)).filter(Boolean);
+    }
+  }
+  return [];
+}
+
+function formatDate(value?: string) {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMoney(value?: string) {
+  if (!value) return undefined;
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return value;
+  return `$${amount.toLocaleString("en-US")}`;
+}
+
+function joinAddress(source: Row | null | undefined, prefix: "" | "operating") {
+  const key = (name: string) =>
+    prefix ? `${prefix}${name.charAt(0).toUpperCase()}${name.slice(1)}` : name;
+  const parts = [
+    pick(source, key("streetAddress"), key("address")),
+    pick(source, key("city")),
+    pick(source, key("state")),
+    pick(source, key("postalCode")),
+    pick(source, key("country")),
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : undefined;
+}
+
+function Field({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <span className="text-slate-500 dark:text-slate-400 block text-xs mb-0.5">{label}</span>
+      {value ? (
+        <span className="font-medium text-slate-800 dark:text-slate-100 break-words">{value}</span>
+      ) : (
+        <span className="font-medium text-slate-300 dark:text-slate-600 italic">Not provided</span>
+      )}
+    </div>
+  );
+}
+
+function Chips({ items }: { items: string[] }) {
+  if (items.length === 0) {
+    return <span className="font-medium text-slate-300 dark:text-slate-600 italic">Not provided</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span
+          key={item}
+          className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function StatusBadge({ value }: { value?: string }) {
+  const status = normalizeReviewStatus(value);
+  const styles: Record<string, string> = {
+    Approved: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40",
+    Rejected: "bg-red-50 text-red-600 dark:bg-red-950/40",
+    "In Review": "bg-blue-50 text-blue-600 dark:bg-blue-950/40",
+    Pending: "bg-amber-50 text-amber-600 dark:bg-amber-950/40",
+  };
+  const label = status || value || "Pending";
+  return (
+    <span
+      className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wide ${
+        styles[label] || "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+      }`}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Section({
+  title,
+  icon,
+  onEdit,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  onEdit?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">
+        <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          {icon} {title}
+        </h3>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:underline"
+          >
+            <MdEdit className="w-3.5 h-3.5" /> Edit
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export default function Step6ReviewSubmit() {
-  const { goToPrevStep, registrationData, setRegistrationData, markStepCompleted } = useOnboardingPartner();
+  const {
+    goToPrevStep,
+    setCurrentStep,
+    registrationData,
+    setRegistrationData,
+    markStepCompleted,
+  } = useOnboardingPartner();
   const submitRegistration = useSubmitRegistration();
   const lookupCompany = useLookupCompany();
   const [error, setError] = useState<string | null>(null);
@@ -15,24 +169,54 @@ export default function Step6ReviewSubmit() {
 
   useEffect(() => {
     if (registrationData?.rcNumber) {
-      lookupCompany.mutateAsync(registrationData.rcNumber).then(res => {
-        if (res?.success && res.data) {
-          setRegistrationData(res.data);
-        }
-      }).catch(err => {
-        console.error("Failed to fetch fresh data for review", err);
-      }).finally(() => {
-        setIsFetching(false);
-      });
+      lookupCompany
+        .mutateAsync(registrationData.rcNumber)
+        .then((res) => {
+          // The hook already throws on an error envelope, so trust `data` when
+          // it is present rather than a `success` flag the API may not send.
+          if (res?.data) {
+            setRegistrationData(res.data);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch fresh data for review", err);
+        })
+        .finally(() => {
+          setIsFetching(false);
+        });
     }
   }, []);
+
+  const data = registrationData as unknown as Row | null;
+
+  const owners = useMemo(() => {
+    const list = registrationData?.beneficialOwners;
+    return Array.isArray(list) ? (list as Row[]) : [];
+  }, [registrationData]);
+
+  const documents = useMemo(() => {
+    const collections = ["documents", "companyDocuments", "uploadedDocuments", "documentUploads"];
+    return collections.flatMap((key) => {
+      const value = data?.[key];
+      return Array.isArray(value) ? (value as Row[]) : [];
+    });
+  }, [data]);
+
+  const registeredAddress = joinAddress(data, "");
+  const operatingAddress = joinAddress(data, "operating");
+  const phone = [pick(data, "phoneCountryCode"), pick(data, "phoneNumber")]
+    .filter(Boolean)
+    .join(" ");
+
+  const fundingSource = pick(data, "primaryFundingSource");
+  const otherFundingSource = pick(data, "otherFundingSource");
 
   const handleSubmit = async () => {
     if (!registrationData?.companyId) {
       setError("Company ID is missing.");
       return;
     }
-    
+
     setError(null);
     try {
       const response = await submitRegistration.mutateAsync(registrationData.companyId);
@@ -54,22 +238,15 @@ export default function Step6ReviewSubmit() {
         <p className="text-slate-600 text-center max-w-md mb-8">
           Your onboarding application has been successfully submitted for review. We will notify you once the process is complete.
         </p>
-        {/* <button
-          onClick={() => window.location.href = '/login'}
-          className="px-8 py-3 bg-accent hover:bg-accent-hover text-white font-bold rounded-xl transition-all shadow-sm"
-        >
-          Go to Dashboard
-        </button> */}
       </div>
     );
   }
-  
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 mt-8 max-w-3xl w-full">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">Review & Submit</h2>
-        <p className="text-slate-500 text-sm">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Review &amp; Submit</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">
           Please review your information before final submission. Once submitted, your application will be under review.
         </p>
       </div>
@@ -86,6 +263,12 @@ export default function Step6ReviewSubmit() {
         </div>
       )}
 
+      {error && (
+        <div className="mb-6 p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl">
+          {error}
+        </div>
+      )}
+
       {isFetching ? (
         <div className="flex justify-center py-12">
           <svg className="animate-spin h-8 w-8 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -95,119 +278,242 @@ export default function Step6ReviewSubmit() {
         </div>
       ) : (
         <div className="flex-1 space-y-8 pb-8">
-          {/* Preview Sections */}
-        {registrationData && (
-          <div className="space-y-8 bg-transparent">
-            {/* Basic Information */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                <MdBusiness className="text-accent" /> Basic Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-500 block">Legal Business Name</span>
-                  <span className="font-medium text-slate-800">{registrationData.legalBusinessName || "N/A"}</span>
+          {registrationData && (
+            <div className="space-y-8 bg-transparent">
+              {/* Basic Information */}
+              <Section
+                title="Basic Information"
+                icon={<MdBusiness className="text-accent" />}
+                onEdit={() => setCurrentStep(1)}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <Field
+                    label="Legal Business Name"
+                    value={pick(data, "legalBusinessName", "companyName", "businessName")}
+                  />
+                  <Field label="Trading Name" value={pick(data, "tradingName")} />
+                  <Field
+                    label="RC/Registration Number"
+                    value={pick(data, "rcNumber", "registrationNumber")}
+                  />
+                  <Field label="Business Type" value={pick(data, "businessType")} />
+                  <Field
+                    label="Country of Incorporation"
+                    value={pick(data, "countryOfIncorporation", "country")}
+                  />
+                  <Field
+                    label="Date of Incorporation"
+                    value={formatDate(pick(data, "dateOfIncorporation"))}
+                  />
+                  <Field label="Tax ID" value={pick(data, "taxId", "taxIdentificationNumber")} />
+                  <Field label="Website" value={pick(data, "website")} />
                 </div>
-                <div>
-                  <span className="text-slate-500 block">Trading Name</span>
-                  <span className="font-medium text-slate-800">{registrationData.tradingName || "N/A"}</span>
+              </Section>
+
+              {/* Contact Information */}
+              <Section
+                title="Contact Information"
+                icon={<MdOutlineContactPhone className="text-accent" />}
+                onEdit={() => setCurrentStep(2)}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <Field label="Business Email" value={pick(data, "businessEmail", "email")} />
+                  <Field label="Phone Number" value={phone || undefined} />
+                  <div className="md:col-span-2">
+                    <Field label="Registered Address" value={registeredAddress} />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Field
+                      label="Operating Address"
+                      value={
+                        operatingAddress && operatingAddress !== registeredAddress
+                          ? operatingAddress
+                          : registeredAddress
+                            ? "Same as registered address"
+                            : undefined
+                      }
+                    />
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block">RC/Registration Number</span>
-                  <span className="font-medium text-slate-800">{registrationData.rcNumber || "N/A"}</span>
+              </Section>
+
+              {/* Additional Details */}
+              <Section
+                title="Additional Details"
+                icon={<MdInfoOutline className="text-accent" />}
+                onEdit={() => setCurrentStep(3)}
+              >
+                <div className="space-y-4 text-sm">
+                  <Field label="Business Description" value={pick(data, "businessDescription")} />
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs mb-1.5">
+                      Services Requested
+                    </span>
+                    <Chips items={pickList(data, "servicesRequested", "services")} />
+                  </div>
+                  <div>
+                    <span className="text-slate-500 dark:text-slate-400 block text-xs mb-1.5">
+                      Digital Asset Services
+                    </span>
+                    <Chips items={pickList(data, "digitalAssetServices", "digitalAssetsServices")} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field
+                      label="Primary Funding Source"
+                      value={
+                        fundingSource === "Other" && otherFundingSource
+                          ? `Other — ${otherFundingSource}`
+                          : fundingSource || otherFundingSource
+                      }
+                    />
+                    <Field
+                      label="Estimated Monthly Volume"
+                      value={formatMoney(pick(data, "estimatedMonthlyVolume"))}
+                    />
+                    <Field
+                      label="Estimated Annual Revenue"
+                      value={formatMoney(pick(data, "estimatedAnnualRevenue"))}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <span className="text-slate-500 block">Business Type</span>
-                  <span className="font-medium text-slate-800">{registrationData.businessType || "N/A"}</span>
-                </div>
-              </div>
+              </Section>
+
+              {/* Beneficial Owners */}
+              <Section
+                title={`Beneficial Owners${owners.length ? ` (${owners.length})` : ""}`}
+                icon={<MdOutlinePeople className="text-accent" />}
+                onEdit={() => setCurrentStep(4)}
+              >
+                {owners.length === 0 ? (
+                  <p className="text-sm text-slate-400 italic">No beneficial owners added.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {owners.map((owner, idx) => {
+                      const roles = [
+                        owner.isShareholder ? "Shareholder" : null,
+                        owner.isDirector ? "Director" : null,
+                        owner.isLegalRepresentative ? "Legal Representative" : null,
+                      ].filter(Boolean) as string[];
+
+                      return (
+                        <div
+                          key={(owner.id as string) || idx}
+                          className="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl text-sm"
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <h4 className="font-bold text-slate-800 dark:text-white">
+                              {[pick(owner, "firstName"), pick(owner, "lastName")]
+                                .filter(Boolean)
+                                .join(" ") || `Owner ${idx + 1}`}
+                            </h4>
+                            <Chips items={roles} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Field label="Email" value={pick(owner, "email")} />
+                            <Field
+                              label="Phone Number"
+                              value={
+                                [pick(owner, "phoneCountryCode"), pick(owner, "phoneNumber")]
+                                  .filter(Boolean)
+                                  .join(" ") || undefined
+                              }
+                            />
+                            <Field
+                              label="Date of Birth"
+                              value={formatDate(pick(owner, "dateOfBirth"))}
+                            />
+                            <Field
+                              label="Ownership Percentage"
+                              value={
+                                owner.ownershipPercentage !== undefined &&
+                                owner.ownershipPercentage !== null
+                                  ? `${owner.ownershipPercentage}%`
+                                  : undefined
+                              }
+                            />
+                            <Field label="BVN" value={pick(owner, "bvn")} />
+                            <Field
+                              label="National ID"
+                              value={pick(owner, "nationalIdNumber", "nationalId")}
+                            />
+                            <Field label="Source of Wealth" value={pick(owner, "sourceOfWealth")} />
+                            <div className="md:col-span-2">
+                              <Field label="Address" value={joinAddress(owner, "")} />
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Identity
+                              </span>
+                              <StatusBadge value={pick(owner, "verificationStatus")} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Proof of Wealth
+                              </span>
+                              <StatusBadge value={pick(owner, "proofOfWealthStatus")} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                Proof of Address
+                              </span>
+                              <StatusBadge value={pick(owner, "proofOfAddressStatus")} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+
+              {/* Documents */}
+              {documents.length > 0 && (
+                <Section
+                  title={`Documents (${documents.length})`}
+                  icon={<MdOutlineDescription className="text-accent" />}
+                  onEdit={() => setCurrentStep(5)}
+                >
+                  <div className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+                    {documents.map((doc, idx) => {
+                      const url = pick(doc, "url", "fileUrl", "documentUrl", "downloadUrl", "contentUrl", "path");
+                      return (
+                        <div
+                          key={(doc.id as string) || idx}
+                          className="py-3 flex items-center justify-between gap-3"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="font-medium text-slate-800 dark:text-slate-100 truncate">
+                              {pick(doc, "title", "documentType", "name", "type", "category") ||
+                                `Document ${idx + 1}`}
+                            </span>
+                            <StatusBadge value={pick(doc, "status", "docStatus", "documentStatus", "approvalStatus")} />
+                          </div>
+                          {url && (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="shrink-0 text-accent hover:underline font-medium"
+                            >
+                              View
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+              )}
             </div>
+          )}
 
-            {/* Contact Information */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                <MdOutlineContactPhone className="text-accent" /> Contact Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-500 block">Business Email</span>
-                  <span className="font-medium text-slate-800">{registrationData.businessEmail || "N/A"}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Phone Number</span>
-                  <span className="font-medium text-slate-800">
-                    {registrationData.phoneCountryCode ? `${registrationData.phoneCountryCode} ` : ''}
-                    {registrationData.phoneNumber || "N/A"}
-                  </span>
-                </div>
-                <div className="md:col-span-2">
-                  <span className="text-slate-500 block">Address</span>
-                  <span className="font-medium text-slate-800">
-                    {[registrationData.streetAddress, registrationData.city, registrationData.state, registrationData.operatingCountry || registrationData.countryOfIncorporation].filter(Boolean).join(", ") || "N/A"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Details */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                <MdInfoOutline className="text-accent" /> Additional Details
-              </h3>
-              <div className="text-sm">
-                <span className="text-slate-500 block">Business Description</span>
-                <span className="font-medium text-slate-800">{registrationData.businessDescription || "N/A"}</span>
-              </div>
-            </div>
-
-            {/* Beneficial Owners */}
-            {registrationData.beneficialOwners && registrationData.beneficialOwners.length > 0 && (
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 border-b border-slate-100 pb-2">
-                  <MdOutlinePeople className="text-accent" /> Beneficial Owners
-                </h3>
-                <div className="space-y-4">
-                  {registrationData.beneficialOwners.map((owner, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 border border-slate-100 rounded-xl text-sm">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <span className="text-slate-500 block">Name</span>
-                          <span className="font-medium text-slate-800">{String(owner.firstName || "")} {String(owner.lastName || "")}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Email</span>
-                          <span className="font-medium text-slate-800">{String(owner.email || "N/A")}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Ownership Percentage</span>
-                          <span className="font-medium text-slate-800">{owner.ownershipPercentage !== undefined ? String(owner.ownershipPercentage) + "%" : "N/A"}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Verification Status</span>
-                          <span className="font-medium text-slate-800">{String(owner.verificationStatus || "Pending")}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Proof of Wealth</span>
-                          <span className="font-medium text-slate-800">{String(owner.proofOfWealthStatus || "Pending Upload")}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500 block">Proof of Address</span>
-                          <span className="font-medium text-slate-800">{String(owner.proofOfAddressStatus || "Pending Upload")}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-8 flex justify-between border-t border-slate-100 pt-6">
-          <button
+          <div className="mt-8 flex justify-between border-t border-slate-100 dark:border-slate-700 pt-6">
+            <button
               onClick={goToPrevStep}
               disabled={submitRegistration.isPending}
-              className="px-8 py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50"
+              className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-all active:scale-95 disabled:opacity-50"
             >
               Back
             </button>

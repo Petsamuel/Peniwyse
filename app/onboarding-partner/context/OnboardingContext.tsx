@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode, Dispatch, SetStateAction, useEffect, useRef } from "react";
 import { RegistrationInfo, useLookupCompany } from "../../hooks/use-onboarding";
+import { hasRejectedDocuments } from "../utils/document-review";
 
 interface OnboardingContextProps {
   currentStep: number;
@@ -15,6 +16,8 @@ interface OnboardingContextProps {
   setCompanyId: (id: string | null) => void;
   registrationData: RegistrationInfo | null;
   setRegistrationData: Dispatch<SetStateAction<RegistrationInfo | null>>;
+  /** Sends the partner to the documents step if a reviewer rejected anything. Returns true when it navigated. */
+  jumpToRejectedDocuments: (data: RegistrationInfo | null) => boolean;
 }
 
 const OnboardingContext = createContext<OnboardingContextProps | undefined>(undefined);
@@ -28,6 +31,8 @@ const STEP_NAMES = [
   "documents-upload",
   "review-submit"
 ];
+
+export const DOCUMENTS_STEP = STEP_NAMES.indexOf("documents-upload");
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [currentStep, setCurrentStepState] = useState(() => {
@@ -60,6 +65,23 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<RegistrationInfo | null>(null);
   const lastRefreshedRcNumber = useRef<string | null>(null);
+  const autoJumpedForCompany = useRef<string | null>(null);
+
+  /**
+   * A rejected document can only be acted on from the documents step, so take
+   * the partner there as soon as we learn about it. Once per company — after
+   * that they are free to move around without being pulled back.
+   */
+  const jumpToRejectedDocuments = (data: RegistrationInfo | null) => {
+    if (!data) return false;
+    const key = data.companyId || data.rcNumber;
+    if (!key || autoJumpedForCompany.current === key) return false;
+    if (!hasRejectedDocuments(data as unknown as Record<string, unknown>)) return false;
+
+    autoJumpedForCompany.current = key;
+    setCurrentStep(DOCUMENTS_STEP);
+    return true;
+  };
 
   const lookupCompany = useLookupCompany();
 
@@ -73,6 +95,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       .then(res => {
         if (res.success && res.data) {
           setRegistrationData(res.data);
+          jumpToRejectedDocuments(res.data);
         }
       })
       .catch(err => console.error("Failed to refresh profile on step change", err));
@@ -108,6 +131,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setCompanyId,
         registrationData,
         setRegistrationData,
+        jumpToRejectedDocuments,
       }}
     >
       {children}

@@ -9,6 +9,7 @@ import { MdOutlinePerson, MdAdd, MdDelete, MdErrorOutline, MdLink, MdContentCopy
 import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Select, { SingleValue, MultiValue, ClassNamesConfig } from 'react-select';
+import CreatableSelect from 'react-select/creatable';
 import { Country, State, City } from 'country-state-city';
 import * as Flags from 'country-flag-icons/react/3x2';
 
@@ -256,7 +257,10 @@ export default function Step4BeneficialOwners() {
     }));
   }, [countryIsoCode, stateIsoCode]);
 
-  const selectedCityOption = cityOptions.find(o => o.value === formData.city) || null;
+  // Keep a typed-in city visible even though it is not in the reference list.
+  const selectedCityOption = formData.city
+    ? cityOptions.find(o => o.value === formData.city) || { value: formData.city, label: formData.city }
+    : null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -854,7 +858,7 @@ export default function Step4BeneficialOwners() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">City</label>
-              <Select unstyled classNames={getSelectClassNames(false)} options={cityOptions} value={selectedCityOption} onChange={handleCityChange} placeholder={stateIsoCode ? "Select City" : "Select State first"} isDisabled={!stateIsoCode} isClearable isSearchable />
+              <CreatableSelect unstyled classNames={getSelectClassNames(false)} options={cityOptions} value={selectedCityOption} onChange={handleCityChange} placeholder={formData.state ? "Select or type your city" : "Select State first"} isDisabled={!formData.state} formatCreateLabel={(input) => `Use "${input}"`} isClearable isSearchable />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Postal Code <span className="text-accent">*</span></label>

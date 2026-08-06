@@ -24,12 +24,50 @@ import {
   MdOutlineLink,
   MdKeyboardArrowUp,
   MdKeyboardArrowDown,
+  MdCancel,
 } from "react-icons/md";
 import { uploadRespondentDocument } from "@/app/utils/api/respondents";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
+import {
+  DocumentReview,
+  formatReviewDate,
+  readCompanyDocumentReview,
+  readOwnerDocumentReview,
+} from "../../utils/document-review";
 
 type Tab = "Pending Actions" | "In Review" | "Completed";
+
+function RejectedBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-600 text-[11px] font-bold uppercase tracking-wide">
+      <MdCancel className="w-3.5 h-3.5" /> Rejected
+    </span>
+  );
+}
+
+/** The reviewer's note explaining why a document came back. */
+function ReviewComment({ review }: { review: DocumentReview }) {
+  const reviewedAt = formatReviewDate(review.reviewedAt);
+  return (
+    <div className="mt-3 rounded-xl border border-red-100 dark:border-red-900/50 bg-red-50/70 dark:bg-red-950/20 px-4 py-3">
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-red-600">
+          Review comment
+        </span>
+        {reviewedAt && (
+          <span className="shrink-0 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            {reviewedAt}
+          </span>
+        )}
+      </div>
+      <p className="text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
+        {review.comment ||
+          "This document was rejected. Please upload a new document."}
+      </p>
+    </div>
+  );
+}
 
 interface BeneficialOwnerDocInfo {
   id?: string;
@@ -90,6 +128,12 @@ export default function Step5DocumentsUpload() {
   >({});
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [collapsedOwners, setCollapsedOwners] = useState<
+    Record<string, boolean>
+  >({});
+  // Documents re-uploaded in this session. The backend keeps the old "Rejected"
+  // verdict until a reviewer looks again, which would otherwise leave the
+  // partner stuck behind a blocked Submit button.
+  const [replacedRejections, setReplacedRejections] = useState<
     Record<string, boolean>
   >({});
 
@@ -170,6 +214,11 @@ export default function Step5DocumentsUpload() {
       } else if (updatedData) {
         setRegistrationData(updatedData);
       }
+
+      setReplacedRejections((prev) => ({
+        ...prev,
+        [`${shareholderId}:${docType}`]: true,
+      }));
 
       success("Success", `${docType} uploaded successfully.`);
     } catch (err: unknown) {
@@ -257,6 +306,8 @@ export default function Step5DocumentsUpload() {
       isVerificationLink?: boolean;
       verificationUrl?: string;
       verificationStatus?: string;
+      review?: DocumentReview;
+      isRejected?: boolean;
     }> = [];
     if (!registrationData?.beneficialOwners) return docs;
 
@@ -283,24 +334,56 @@ export default function Step5DocumentsUpload() {
         url: verUrl, // treated as "done" if a link exists
       });
 
+      const source = _owner as Record<string, unknown>;
+
       // Proof of Wealth
+      const wealthReview = readOwnerDocumentReview(source, "wealth");
       docs.push({
         shareholderId: ownerId as string,
         name: `${owner.firstName} ${owner.lastName}`,
         docType: "Proof of Wealth",
         url: getBeneficialOwnerDocumentUrl(owner, "wealth"),
+        review: wealthReview,
+        isRejected:
+          wealthReview.isRejected &&
+          !replacedRejections[`${ownerId}:Proof of Wealth`],
       });
 
       // Proof of Address
+      const addressReview = readOwnerDocumentReview(source, "address");
       docs.push({
         shareholderId: ownerId as string,
         name: `${owner.firstName} ${owner.lastName}`,
         docType: "Proof of Address",
         url: getBeneficialOwnerDocumentUrl(owner, "address"),
+        review: addressReview,
+        isRejected:
+          addressReview.isRejected &&
+          !replacedRejections[`${ownerId}:Proof of Address`],
       });
     });
     return docs;
-  }, [registrationData, generatedVerificationLinks]);
+  }, [registrationData, generatedVerificationLinks, replacedRejections]);
+
+  /** Reviewer verdicts on company documents, keyed by document type id. */
+  const companyDocReviews = useMemo(() => {
+    const source = registrationData as unknown as Record<string, unknown>;
+    const reviews: Record<string, DocumentReview> = {};
+
+    (documentTypes || []).forEach((docType) => {
+      const review = readCompanyDocumentReview(source, docType.id, docType.name);
+      if (review.isRejected) reviews[docType.id] = review;
+    });
+
+    const amlReview = readCompanyDocumentReview(
+      source,
+      "AML_DUE_DILIGENCE",
+      "AML Due Diligence Questionnaire",
+    );
+    if (amlReview.isRejected) reviews[AML_DOC_ID] = amlReview;
+
+    return reviews;
+  }, [documentTypes, registrationData]);
 
   const groupedAllShareholders = useMemo(() => {
     const map = new Map<
@@ -341,7 +424,7 @@ export default function Step5DocumentsUpload() {
       const requiredTypes = documentTypes?.filter((t) => t.required) || [];
       const missingRequired = requiredTypes.filter((t) => !selectedFiles[t.id]);
       const missingShareholderDocs = allShareholderDocs.filter(
-        (doc) => !doc.isVerificationLink && !doc.url,
+        (doc) => !doc.isVerificationLink && (!doc.url || doc.isRejected),
       );
 
       if (missingRequired.length > 0 || missingShareholderDocs.length > 0) {
@@ -422,11 +505,15 @@ export default function Step5DocumentsUpload() {
   const shareholderDocsPendingCount = allShareholderDocs.filter((doc) =>
     doc.isVerificationLink
       ? doc.verificationStatus?.toLowerCase() !== "approved"
-      : !doc.url,
+      : !doc.url || doc.isRejected,
   ).length;
 
   const pendingCount = companyDocsPendingCount + shareholderDocsPendingCount;
   const inReviewCount = 0;
+
+  const rejectedCount =
+    Object.keys(companyDocReviews).filter((id) => !selectedFiles[id]).length +
+    allShareholderDocs.filter((doc) => doc.isRejected).length;
 
   const companyInitials = registrationData?.legalBusinessName ?? "Company";
 
@@ -505,6 +592,22 @@ export default function Step5DocumentsUpload() {
         </p>
       </div>
 
+      {rejectedCount > 0 && (
+        <div className="p-4 mb-6 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl flex items-start gap-3">
+          <MdCancel className="w-5 h-5 shrink-0 text-red-600 mt-0.5" />
+          <div>
+            <h3 className="text-[15px] font-bold text-red-700 dark:text-red-400 mb-0.5">
+              {rejectedCount} document{rejectedCount !== 1 ? "s were" : " was"}{" "}
+              rejected
+            </h3>
+            <p className="text-sm text-red-600/90 dark:text-red-400/80">
+              Read the reviewer&apos;s comment on each one below and upload a
+              new document to continue.
+            </p>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="p-4 mb-6 text-sm text-red-600 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl flex items-center gap-2">
           <MdErrorOutline className="w-5 h-5 shrink-0" />
@@ -541,17 +644,20 @@ export default function Step5DocumentsUpload() {
               {companyDocsAll.map((docType) => {
                 const file = selectedFiles[docType.id];
                 const isUploaded = !!file;
+                const review = companyDocReviews[docType.id];
+                const isRejected = !!review?.isRejected && !isUploaded;
                 return (
                   <div
                     key={docType.id}
-                    className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                    className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
                   >
                     <div className="flex-1">
-                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                        {docType.name}{" "}
-                        {!isUploaded && docType.required && (
+                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                        {docType.name}
+                        {!isUploaded && docType.required && !isRejected && (
                           <span className="text-red-500">*</span>
                         )}
+                        {isRejected && <RejectedBadge />}
                       </h4>
                       {!isUploaded ? (
                         <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
@@ -564,6 +670,7 @@ export default function Step5DocumentsUpload() {
                           {file.name}
                         </p>
                       )}
+                      {isRejected && <ReviewComment review={review} />}
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
                       {isUploaded && (
@@ -593,13 +700,18 @@ export default function Step5DocumentsUpload() {
                       />
                       <label
                         htmlFor={`doc-${docType.id}`}
-                        className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors ${
+                        className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
                           !isUploaded
                             ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
                             : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
                         }`}
                       >
-                        {!isUploaded ? (
+                        {isRejected ? (
+                          <>
+                            <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
+                            Upload New document
+                          </>
+                        ) : !isUploaded ? (
                           <>
                             <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
                             Upload
@@ -617,12 +729,17 @@ export default function Step5DocumentsUpload() {
               {(() => {
                 const amlFile = selectedFiles[AML_DOC_ID];
                 const isUploaded = !!amlFile;
+                const review = companyDocReviews[AML_DOC_ID];
+                const isRejected = !!review?.isRejected && !isUploaded;
                 return (
                   <div className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                        AML Due Diligence Questionnaire{" "}
-                        {!isUploaded && <span className="text-red-500">*</span>}
+                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                        AML Due Diligence Questionnaire
+                        {!isUploaded && !isRejected && (
+                          <span className="text-red-500">*</span>
+                        )}
+                        {isRejected && <RejectedBadge />}
                       </h4>
                       {isUploaded ? (
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
@@ -642,6 +759,7 @@ export default function Step5DocumentsUpload() {
                           </a>
                         </p>
                       )}
+                      {isRejected && <ReviewComment review={review} />}
                     </div>
                     <div className="shrink-0 flex items-center gap-2">
                       {/* Preview button */}
@@ -685,13 +803,18 @@ export default function Step5DocumentsUpload() {
                       />
                       <label
                         htmlFor={`doc-${AML_DOC_ID}`}
-                        className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors ${
+                        className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
                           !isUploaded
                             ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
                             : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
                         }`}
                       >
-                        {!isUploaded ? (
+                        {isRejected ? (
+                          <>
+                            <MdOutlineCloudUpload className="w-[18px] h-[18px]" />
+                            Upload New document
+                          </>
+                        ) : !isUploaded ? (
                           <>
                             <MdOutlineCloudUpload className="w-[18px] h-[18px]" />
                             Upload
@@ -711,7 +834,7 @@ export default function Step5DocumentsUpload() {
               const pendingDocs = owner.docs.filter((d) =>
                 d.isVerificationLink
                   ? d.verificationStatus?.toLowerCase() !== "approved"
-                  : !d.url,
+                  : !d.url || d.isRejected,
               ).length;
               const isCompleted = pendingDocs === 0;
               const isCollapsed = isCompleted
@@ -873,17 +996,19 @@ export default function Step5DocumentsUpload() {
 
                         /* ── Upload row (Proof of Wealth / Proof of Address) ── */
                         const isUploaded = !!doc.url;
+                        const isRejected = !!doc.isRejected;
                         return (
                           <div
                             key={`${doc.shareholderId}-${doc.docType}-${idx}`}
-                            className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                            className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
                           >
                             <div className="flex-1">
-                              <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                                {doc.docType}{" "}
-                                {!isUploaded && (
+                              <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                                {doc.docType}
+                                {!isUploaded && !isRejected && (
                                   <span className="text-red-500">*</span>
                                 )}
+                                {isRejected && <RejectedBadge />}
                               </h4>
                               {!isUploaded ? (
                                 <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
@@ -892,10 +1017,12 @@ export default function Step5DocumentsUpload() {
                                 </p>
                               ) : (
                                 <div className="flex items-center gap-3 mt-1 text-sm">
-                                  <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                    <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
-                                    Uploaded
-                                  </span>
+                                  {!isRejected && (
+                                    <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                      <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
+                                      Uploaded
+                                    </span>
+                                  )}
                                   {doc.url && (
                                     <a
                                       href={doc.url}
@@ -903,10 +1030,14 @@ export default function Step5DocumentsUpload() {
                                       rel="noopener noreferrer"
                                       className="text-[#185A9D] hover:underline font-medium"
                                     >
-                                      View Document
+                                      View {isRejected ? "rejected " : ""}
+                                      document
                                     </a>
                                   )}
                                 </div>
+                              )}
+                              {isRejected && doc.review && (
+                                <ReviewComment review={doc.review} />
                               )}
                             </div>
                             <div className="shrink-0">
@@ -925,13 +1056,18 @@ export default function Step5DocumentsUpload() {
                               />
                               <label
                                 htmlFor={`sh-doc-${doc.shareholderId}-${doc.docType}`}
-                                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors ${
-                                  !isUploaded
+                                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
+                                  !isUploaded || isRejected
                                     ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
                                     : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
                                 }`}
                               >
-                                {!isUploaded ? (
+                                {isRejected ? (
+                                  <>
+                                    <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
+                                    Upload New document
+                                  </>
+                                ) : !isUploaded ? (
                                   <>
                                     <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
                                     Upload
