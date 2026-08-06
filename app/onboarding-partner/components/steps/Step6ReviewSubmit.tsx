@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
-import { useSubmitRegistration, useLookupCompany } from "@/app/hooks/use-onboarding";
+import { useSubmitRegistration, RegistrationInfo } from "@/app/hooks/use-onboarding";
 import {
   MdCheckCircle,
   MdErrorOutline,
@@ -160,31 +160,23 @@ export default function Step6ReviewSubmit() {
     registrationData,
     setRegistrationData,
     markStepCompleted,
+    refreshRegistration,
   } = useOnboardingPartner();
   const submitRegistration = useSubmitRegistration();
-  const lookupCompany = useLookupCompany();
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [isFetching, setIsFetching] = useState(!!registrationData?.rcNumber);
+  const [isFetching, setIsFetching] = useState(true);
 
+  // Always re-read the registration here: the previous step's completion call
+  // answers with a status object, so what is in context may be a stub.
   useEffect(() => {
-    if (registrationData?.rcNumber) {
-      lookupCompany
-        .mutateAsync(registrationData.rcNumber)
-        .then((res) => {
-          // The hook already throws on an error envelope, so trust `data` when
-          // it is present rather than a `success` flag the API may not send.
-          if (res?.data) {
-            setRegistrationData(res.data);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to fetch fresh data for review", err);
-        })
-        .finally(() => {
-          setIsFetching(false);
-        });
-    }
+    refreshRegistration()
+      .catch((err) => {
+        console.error("Failed to fetch fresh data for review", err);
+      })
+      .finally(() => {
+        setIsFetching(false);
+      });
   }, []);
 
   const data = registrationData as unknown as Row | null;
@@ -221,7 +213,12 @@ export default function Step6ReviewSubmit() {
     try {
       const response = await submitRegistration.mutateAsync(registrationData.companyId);
       if (response) {
-        setRegistrationData(response);
+        // Merge: the submit endpoint answers with a status object, and replacing
+        // would drop the registration the rest of the flow reads from.
+        setRegistrationData(
+          (prev) =>
+            ({ ...(prev || {}), ...(response as Partial<RegistrationInfo>) }) as RegistrationInfo,
+        );
       }
       markStepCompleted(6);
       setIsSuccess(true);

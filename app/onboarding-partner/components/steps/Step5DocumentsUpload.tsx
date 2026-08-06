@@ -110,6 +110,7 @@ export default function Step5DocumentsUpload() {
     companyId,
     registrationData,
     setRegistrationData,
+    refreshRegistration,
   } = useOnboardingPartner();
   const { data: documentTypes, isLoading } = useDocumentTypes();
   const completeDocs = useCompleteDocuments();
@@ -202,17 +203,12 @@ export default function Step5DocumentsUpload() {
       const updatedData =
         await uploadShareholderDoc.mutateAsync(uploadFormData);
 
-      if (registrationData?.rcNumber) {
-        const freshData = await lookupCompany.mutateAsync(
-          registrationData.rcNumber,
+      const refreshed = await refreshRegistration().catch(() => null);
+      if (!refreshed && updatedData) {
+        // Merge rather than replace — the upload response is not a full registration.
+        setRegistrationData(
+          (prev) => ({ ...(prev || {}), ...updatedData }) as typeof prev,
         );
-        if (freshData?.success && freshData.data) {
-          setRegistrationData(freshData.data);
-        } else if (updatedData) {
-          setRegistrationData(updatedData);
-        }
-      } else if (updatedData) {
-        setRegistrationData(updatedData);
       }
 
       setReplacedRejections((prev) => ({
@@ -465,10 +461,12 @@ export default function Step5DocumentsUpload() {
 
       await Promise.all(uploadPromises);
 
-      const response = await completeDocs.mutateAsync(companyId);
-      if (response) {
-        setRegistrationData(response);
-      }
+      await completeDocs.mutateAsync(companyId);
+      // The completion endpoint answers with a status object, not the whole
+      // registration — re-read it so the review step has real data to show.
+      await refreshRegistration().catch((err) =>
+        console.error("Failed to refresh registration after completing documents", err),
+      );
 
       markStepCompleted(5);
       goToNextStep();

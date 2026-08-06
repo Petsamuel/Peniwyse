@@ -10,7 +10,7 @@ import Step5DocumentsUpload from "./components/steps/Step5DocumentsUpload";
 import Step6ReviewSubmit from "./components/steps/Step6ReviewSubmit";
 
 export default function OnboardingPartnerPage() {
-  const { currentStep } = useOnboardingPartner();
+  const { currentStep, isRestoringSession } = useOnboardingPartner();
 
   const renderStep = () => {
     switch (currentStep) {
@@ -32,6 +32,15 @@ export default function OnboardingPartnerPage() {
         return null;
     }
   };
+
+  if (isRestoringSession) {
+    return (
+      <div className="w-full h-full flex items-center justify-center gap-3 py-24">
+        <div className="w-5 h-5 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <p className="text-slate-500 text-sm">Restoring your application...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">
