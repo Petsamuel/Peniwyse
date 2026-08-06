@@ -11,6 +11,7 @@ import {
   MdInfoOutline,
   MdOutlinePeople,
   MdOutlineDescription,
+  MdOutlineAccountBalance,
   MdEdit,
 } from "react-icons/md";
 import { normalizeReviewStatus } from "../../utils/document-review";
@@ -372,6 +373,22 @@ export default function Step6ReviewSubmit() {
                       value={formatMoney(pick(data, "estimatedAnnualRevenue"))}
                     />
                   </div>
+                </div>
+              </Section>
+
+              {/* Payment Details */}
+              <Section
+                title="Payment Details"
+                icon={<MdOutlineAccountBalance className="text-accent" />}
+                onEdit={() => setCurrentStep(3)}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <Field label="Bank Name" value={pick(data, "bankName")} />
+                  <Field label="Account Name" value={pick(data, "accountName")} />
+                  <Field label="Account Number" value={pick(data, "accountNumber")} />
+                  <Field label="Routing Number" value={pick(data, "routingNumber")} />
+                  <Field label="SWIFT Code" value={pick(data, "swiftCode")} />
+                  <Field label="Bank Address" value={pick(data, "bankAddress")} />
                 </div>
               </Section>
 

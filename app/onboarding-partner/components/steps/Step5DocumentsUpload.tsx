@@ -388,7 +388,11 @@ export default function Step5DocumentsUpload() {
     const entries: Record<string, CompanyDocument> = {};
 
     (documentTypes || []).forEach((docType) => {
-      entries[docType.id] = readCompanyDocument(source, docType.id, docType.name);
+      entries[docType.id] = readCompanyDocument(
+        source,
+        docType.id,
+        docType.name,
+      );
     });
 
     entries[AML_DOC_ID] = readCompanyDocument(
@@ -502,7 +506,10 @@ export default function Step5DocumentsUpload() {
       // The completion endpoint answers with a status object, not the whole
       // registration — re-read it so the review step has real data to show.
       await refreshRegistration().catch((err) =>
-        console.error("Failed to refresh registration after completing documents", err),
+        console.error(
+          "Failed to refresh registration after completing documents",
+          err,
+        ),
       );
       setSelectedFiles({});
 
@@ -679,206 +686,223 @@ export default function Step5DocumentsUpload() {
               </div>
 
               {/* ── Dynamic company document types from API ── */}
-              {companyDocsAll.map((docType) => {
-                const { entry, file, isRejected, isOnFile } = getDocumentState(
-                  docType.id,
-                );
-                return (
-                  <div
-                    key={docType.id}
-                    className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
-                  >
-                    <div className="flex-1">
-                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
-                        {docType.name}
-                        {!file && !isOnFile && docType.required && !isRejected && (
-                          <span className="text-red-500">*</span>
-                        )}
-                        {isRejected && <RejectedBadge />}
-                        {isOnFile && entry && <StatusBadge review={entry.review} />}
-                      </h4>
-                      {file ? (
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
-                          <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
-                          {file.name}
-                        </p>
-                      ) : isOnFile ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                          {entry?.title || "Document uploaded"}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
-                          {docType.description ||
-                            `Please provide the ${docType.name.toLowerCase()} of your company.`}
-                        </p>
-                      )}
-                      {isRejected && entry && <ReviewComment review={entry.review} />}
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      {(file || entry?.url) && (
-                        <button
-                          onClick={() =>
-                            setPreviewUrl(
-                              file ? URL.createObjectURL(file) : entry!.url!,
-                            )
-                          }
-                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                          title="Preview document"
-                        >
-                          <MdOutlineVisibility className="w-4 h-4" />
-                          View
-                        </button>
-                      )}
-                      {/* Nothing to upload once the document is with the reviewer. */}
-                      {!isOnFile && (
-                        <>
-                          <input
-                            type="file"
-                            id={`doc-${docType.id}`}
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            onChange={(e) =>
-                              handleFileChange(
-                                docType.id,
-                                e.target.files?.[0] || null,
-                              )
-                            }
-                          />
-                          <label
-                            htmlFor={`doc-${docType.id}`}
-                            className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
-                              !file
-                                ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
-                                : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
-                            }`}
-                          >
-                            {file ? (
-                              "Change File"
-                            ) : (
-                              <>
-                                <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
-                                {isRejected ? "Upload New document" : "Upload"}
-                              </>
+              <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {companyDocsAll.map((docType) => {
+                  const { entry, file, isRejected, isOnFile } =
+                    getDocumentState(docType.id);
+                  return (
+                    <div key={docType.id} className="py-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                            {docType.name}
+                            {!file &&
+                              !isOnFile &&
+                              docType.required &&
+                              !isRejected && (
+                                <span className="text-red-500">*</span>
+                              )}
+                            {isRejected && <RejectedBadge />}
+                            {isOnFile && entry && (
+                              <StatusBadge review={entry.review} />
                             )}
-                          </label>
-                        </>
+                          </h4>
+                          {file ? (
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
+                              <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
+                              {file.name}
+                            </p>
+                          ) : isOnFile ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              {entry?.title || "Document uploaded"}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
+                              {docType.description ||
+                                `Please provide the ${docType.name.toLowerCase()} of your company.`}
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          {(file || entry?.url) && (
+                            <button
+                              onClick={() =>
+                                setPreviewUrl(
+                                  file
+                                    ? URL.createObjectURL(file)
+                                    : entry!.url!,
+                                )
+                              }
+                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                              title="Preview document"
+                            >
+                              <MdOutlineVisibility className="w-4 h-4" />
+                              View
+                            </button>
+                          )}
+                          {/* Nothing to upload once the document is with the reviewer. */}
+                          {!isOnFile && (
+                            <>
+                              <input
+                                type="file"
+                                id={`doc-${docType.id}`}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                onChange={(e) =>
+                                  handleFileChange(
+                                    docType.id,
+                                    e.target.files?.[0] || null,
+                                  )
+                                }
+                              />
+                              <label
+                                htmlFor={`doc-${docType.id}`}
+                                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
+                                  !file
+                                    ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
+                                    : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
+                                }`}
+                              >
+                                {file ? (
+                                  "Change File"
+                                ) : (
+                                  <>
+                                    <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
+                                    {isRejected
+                                      ? "Upload New document"
+                                      : "Upload"}
+                                  </>
+                                )}
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {/* Full width so the reviewer's note is not squeezed beside the buttons. */}
+                      {isRejected && entry && (
+                        <ReviewComment review={entry.review} />
                       )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-              {/* ── AML Due Diligence Questionnaire (hardcoded, required) ── */}
-              {(() => {
-                const {
-                  entry: amlEntry,
-                  file: amlFile,
-                  isRejected,
-                  isOnFile,
-                } = getDocumentState(AML_DOC_ID);
-                return (
-                  <div className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
-                        AML Due Diligence Questionnaire
-                        {!amlFile && !isOnFile && !isRejected && (
-                          <span className="text-red-500">*</span>
-                        )}
-                        {isRejected && <RejectedBadge />}
-                        {isOnFile && amlEntry && (
-                          <StatusBadge review={amlEntry.review} />
-                        )}
-                      </h4>
-                      {amlFile ? (
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
-                          <MdCheckCircle className="text-emerald-500 w-4 h-4" />
-                          {amlFile.name}
-                        </p>
-                      ) : isOnFile ? (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                          {amlEntry?.title || "Questionnaire uploaded"}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                          Please fill, sign and upload the{" "}
+                {/* ── AML Due Diligence Questionnaire (hardcoded, required) ── */}
+                {(() => {
+                  const {
+                    entry: amlEntry,
+                    file: amlFile,
+                    isRejected,
+                    isOnFile,
+                  } = getDocumentState(AML_DOC_ID);
+                  return (
+                    <div className="py-5">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                            AML Due Diligence Questionnaire
+                            {!amlFile && !isOnFile && !isRejected && (
+                              <span className="text-red-500">*</span>
+                            )}
+                            {isRejected && <RejectedBadge />}
+                            {isOnFile && amlEntry && (
+                              <StatusBadge review={amlEntry.review} />
+                            )}
+                          </h4>
+                          {amlFile ? (
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5 mt-1">
+                              <MdCheckCircle className="text-emerald-500 w-4 h-4" />
+                              {amlFile.name}
+                            </p>
+                          ) : isOnFile ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              {amlEntry?.title || "Questionnaire uploaded"}
+                            </p>
+                          ) : (
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                              Please fill, sign and upload the{" "}
+                              <a
+                                href={AML_PDF_PATH}
+                                download="AML Due Diligence Questionnaire.pdf"
+                                className="inline-flex items-center gap-1 text-[#185A9D] hover:underline font-medium"
+                              >
+                                <MdOutlineDownload className="w-4 h-4" />
+                                Peniwyse AML Due Diligence Questionnaire
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2">
+                          {/* Preview button */}
+                          <button
+                            onClick={() => {
+                              if (amlFile) {
+                                setPreviewUrl(URL.createObjectURL(amlFile));
+                              } else {
+                                setPreviewUrl(amlEntry?.url || AML_PDF_PATH);
+                              }
+                            }}
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                            title="Preview document"
+                          >
+                            <MdOutlineVisibility className="w-4 h-4" />
+                            View
+                          </button>
+                          {/* Always show Download button */}
                           <a
                             href={AML_PDF_PATH}
                             download="AML Due Diligence Questionnaire.pdf"
-                            className="inline-flex items-center gap-1 text-[#185A9D] hover:underline font-medium"
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                            title="Download form"
                           >
                             <MdOutlineDownload className="w-4 h-4" />
-                            Peniwyse AML Due Diligence Questionnaire
+                            Download
                           </a>
-                        </p>
-                      )}
+                          {/* Nothing to upload once the questionnaire is with the reviewer. */}
+                          {!isOnFile && (
+                            <>
+                              <input
+                                type="file"
+                                id={`doc-${AML_DOC_ID}`}
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                onChange={(e) =>
+                                  handleFileChange(
+                                    AML_DOC_ID,
+                                    e.target.files?.[0] || null,
+                                  )
+                                }
+                              />
+                              <label
+                                htmlFor={`doc-${AML_DOC_ID}`}
+                                className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
+                                  !amlFile
+                                    ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
+                                    : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
+                                }`}
+                              >
+                                {amlFile ? (
+                                  "Re-upload"
+                                ) : (
+                                  <>
+                                    <MdOutlineCloudUpload className="w-[18px] h-[18px]" />
+                                    {isRejected
+                                      ? "Upload New document"
+                                      : "Upload"}
+                                  </>
+                                )}
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      {/* Full width so the reviewer's note is not squeezed beside the buttons. */}
                       {isRejected && amlEntry && (
                         <ReviewComment review={amlEntry.review} />
                       )}
                     </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      {/* Preview button */}
-                      <button
-                        onClick={() => {
-                          if (amlFile) {
-                            setPreviewUrl(URL.createObjectURL(amlFile));
-                          } else {
-                            setPreviewUrl(amlEntry?.url || AML_PDF_PATH);
-                          }
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Preview document"
-                      >
-                        <MdOutlineVisibility className="w-4 h-4" />
-                        View
-                      </button>
-                      {/* Always show Download button */}
-                      <a
-                        href={AML_PDF_PATH}
-                        download="AML Due Diligence Questionnaire.pdf"
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                        title="Download form"
-                      >
-                        <MdOutlineDownload className="w-4 h-4" />
-                        Download
-                      </a>
-                      {/* Nothing to upload once the questionnaire is with the reviewer. */}
-                      {!isOnFile && (
-                        <>
-                          <input
-                            type="file"
-                            id={`doc-${AML_DOC_ID}`}
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            onChange={(e) =>
-                              handleFileChange(
-                                AML_DOC_ID,
-                                e.target.files?.[0] || null,
-                              )
-                            }
-                          />
-                          <label
-                            htmlFor={`doc-${AML_DOC_ID}`}
-                            className={`inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap ${
-                              !amlFile
-                                ? "bg-[#185A9D] text-white hover:bg-[#124b86]"
-                                : "bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
-                            }`}
-                          >
-                            {amlFile ? (
-                              "Re-upload"
-                            ) : (
-                              <>
-                                <MdOutlineCloudUpload className="w-[18px] h-[18px]" />
-                                {isRejected ? "Upload New document" : "Upload"}
-                              </>
-                            )}
-                          </label>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
             </div>
 
             {/* Business Owner Cards */}
@@ -1052,73 +1076,81 @@ export default function Step5DocumentsUpload() {
                         return (
                           <div
                             key={`${doc.shareholderId}-${doc.docType}-${idx}`}
-                            className="py-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+                            className="py-5"
                           >
-                            <div className="flex-1">
-                              <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
-                                {doc.docType}
-                                {!isUploaded && !isRejected && (
-                                  <span className="text-red-500">*</span>
-                                )}
-                                {isRejected && <RejectedBadge />}
-                                {isUploaded && !isRejected && doc.review?.status && (
-                                  <StatusBadge review={doc.review} />
-                                )}
-                              </h4>
-                              {!isUploaded ? (
-                                <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
-                                  Please provide the {doc.docType.toLowerCase()}{" "}
-                                  for this business owner.
-                                </p>
-                              ) : (
-                                <div className="flex items-center gap-3 mt-1 text-sm">
-                                  {!isRejected && (
-                                    <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                      <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
-                                      Uploaded
-                                    </span>
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
+                                  {doc.docType}
+                                  {!isUploaded && !isRejected && (
+                                    <span className="text-red-500">*</span>
                                   )}
-                                  {doc.url && (
-                                    <a
-                                      href={doc.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-[#185A9D] hover:underline font-medium"
-                                    >
-                                      View {isRejected ? "rejected " : ""}
-                                      document
-                                    </a>
-                                  )}
+                                  {isRejected && <RejectedBadge />}
+                                  {isUploaded &&
+                                    !isRejected &&
+                                    doc.review?.status && (
+                                      <StatusBadge review={doc.review} />
+                                    )}
+                                </h4>
+                                {!isUploaded ? (
+                                  <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-1">
+                                    Please provide the{" "}
+                                    {doc.docType.toLowerCase()} for this
+                                    business owner.
+                                  </p>
+                                ) : (
+                                  <div className="flex items-center gap-3 mt-1 text-sm">
+                                    {!isRejected && (
+                                      <span className="font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                                        <MdCheckCircle className="text-emerald-500 w-4 h-4" />{" "}
+                                        Uploaded
+                                      </span>
+                                    )}
+                                    {doc.url && (
+                                      <a
+                                        href={doc.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#185A9D] hover:underline font-medium"
+                                      >
+                                        View {isRejected ? "rejected " : ""}
+                                        document
+                                      </a>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {/* Nothing to upload once the document is with the reviewer. */}
+                              {(!isUploaded || isRejected) && (
+                                <div className="shrink-0">
+                                  <input
+                                    type="file"
+                                    id={`sh-doc-${doc.shareholderId}-${doc.docType}`}
+                                    className="hidden"
+                                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                                    onChange={(e) =>
+                                      handleShareholderDocUpload(
+                                        doc.shareholderId,
+                                        doc.docType,
+                                        e.target.files?.[0] || null,
+                                      )
+                                    }
+                                  />
+                                  <label
+                                    htmlFor={`sh-doc-${doc.shareholderId}-${doc.docType}`}
+                                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap bg-[#185A9D] text-white hover:bg-[#124b86]"
+                                  >
+                                    <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
+                                    {isRejected
+                                      ? "Upload New document"
+                                      : "Upload"}
+                                  </label>
                                 </div>
                               )}
-                              {isRejected && doc.review && (
-                                <ReviewComment review={doc.review} />
-                              )}
                             </div>
-                            {/* Nothing to upload once the document is with the reviewer. */}
-                            {(!isUploaded || isRejected) && (
-                              <div className="shrink-0">
-                                <input
-                                  type="file"
-                                  id={`sh-doc-${doc.shareholderId}-${doc.docType}`}
-                                  className="hidden"
-                                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                  onChange={(e) =>
-                                    handleShareholderDocUpload(
-                                      doc.shareholderId,
-                                      doc.docType,
-                                      e.target.files?.[0] || null,
-                                    )
-                                  }
-                                />
-                                <label
-                                  htmlFor={`sh-doc-${doc.shareholderId}-${doc.docType}`}
-                                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-[14px] font-semibold rounded-lg cursor-pointer transition-colors whitespace-nowrap bg-[#185A9D] text-white hover:bg-[#124b86]"
-                                >
-                                  <MdOutlineCloudUpload className="w-[18px] h-[18px]" />{" "}
-                                  {isRejected ? "Upload New document" : "Upload"}
-                                </label>
-                              </div>
+                            {/* Full width so the reviewer's note is not squeezed beside the buttons. */}
+                            {isRejected && doc.review && (
+                              <ReviewComment review={doc.review} />
                             )}
                           </div>
                         );

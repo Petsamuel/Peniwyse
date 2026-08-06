@@ -7,6 +7,7 @@ import {
   RegistrationInfo,
 } from "@/app/hooks/use-onboarding";
 import Select, { StylesConfig } from "react-select";
+import { MdInfo } from "react-icons/md";
 
 const SERVICE_OPTIONS = [
   { value: "Digital Assets", label: "Digital Assets" },
@@ -58,6 +59,12 @@ export default function Step3AdditionalDetails() {
     businessDescription: registrationData?.businessDescription || "",
     estimatedMonthlyVolume: registrationData?.estimatedMonthlyVolume || "",
     estimatedAnnualRevenue: registrationData?.estimatedAnnualRevenue || "",
+    bankName: registrationData?.bankName || "",
+    accountName: registrationData?.accountName || "",
+    accountNumber: registrationData?.accountNumber || "",
+    routingNumber: registrationData?.routingNumber || "",
+    swiftCode: registrationData?.swiftCode || "",
+    bankAddress: registrationData?.bankAddress || "",
   });
 
   const [fundingSourceSelect, setFundingSourceSelect] =
@@ -162,6 +169,10 @@ export default function Step3AdditionalDetails() {
     if (!fundingSourceSelect) newMissingFields.push("fundingSourceSelect");
     if (fundingSourceSelect === "Other" && !customFundingSource)
       newMissingFields.push("customFundingSource");
+    // Routing number and SWIFT code are region specific, so neither is required.
+    if (!formData.bankName) newMissingFields.push("bankName");
+    if (!formData.accountName) newMissingFields.push("accountName");
+    if (!formData.accountNumber) newMissingFields.push("accountNumber");
 
     if (newMissingFields.length > 0) {
       setMissingFields(newMissingFields);
@@ -186,13 +197,20 @@ export default function Step3AdditionalDetails() {
           digitalAssetsServices: selectedDigitalAssetsServices.map(
             (s) => s.value,
           ),
+          bankName: formData.bankName.trim(),
+          accountName: formData.accountName.trim(),
+          accountNumber: formData.accountNumber.trim(),
+          routingNumber: formData.routingNumber.trim(),
+          swiftCode: formData.swiftCode.trim(),
+          bankAddress: formData.bankAddress.trim(),
         },
       });
-      setRegistrationData((prev) =>
-        ({
-          ...(prev || {}),
-          ...(data as unknown as Partial<RegistrationInfo>),
-        }) as RegistrationInfo,
+      setRegistrationData(
+        (prev) =>
+          ({
+            ...(prev || {}),
+            ...(data as unknown as Partial<RegistrationInfo>),
+          }) as RegistrationInfo,
       );
 
       markStepCompleted(3);
@@ -381,6 +399,100 @@ export default function Step3AdditionalDetails() {
               )}
             />
           )}
+        </div>
+
+        {/* ── Settlement account ── */}
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+          <div className=" px-4 py-5 mb-5">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-white">
+              Account details
+            </h3>
+            <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 mt-1">
+              <MdInfo className="w-4 h-4 shrink-0 text-slate-700 dark:text-slate-200" />
+              Please provide the your Account details
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Bank Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="bankName"
+                value={formData.bankName}
+                onChange={handleChange}
+                placeholder="e.g. First National Bank"
+                className={getInputClassName("bankName")}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Account Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="accountName"
+                value={formData.accountName}
+                onChange={handleChange}
+                placeholder="Name on the account"
+                className={getInputClassName("accountName")}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Account Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="accountNumber"
+                value={formData.accountNumber}
+                onChange={handleChange}
+                placeholder="Account number or IBAN"
+                className={getInputClassName("accountNumber")}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Routing Number
+              </label>
+              <input
+                type="text"
+                name="routingNumber"
+                value={formData.routingNumber}
+                onChange={handleChange}
+                placeholder="If your bank uses one"
+                className={getInputClassName("routingNumber")}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                SWIFT Code
+              </label>
+              <input
+                type="text"
+                name="swiftCode"
+                value={formData.swiftCode}
+                onChange={handleChange}
+                placeholder="e.g. ABCDNGLA"
+                className={getInputClassName("swiftCode")}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                Bank Address
+              </label>
+              <input
+                type="text"
+                name="bankAddress"
+                value={formData.bankAddress}
+                onChange={handleChange}
+                placeholder="Branch address"
+                className={getInputClassName("bankAddress")}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

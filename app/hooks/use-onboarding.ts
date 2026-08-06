@@ -537,6 +537,12 @@ export interface RegistrationInfo {
   otherFundingSource?: string;
   estimatedMonthlyVolume?: number;
   estimatedAnnualRevenue?: number;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  bankAddress?: string;
   beneficialOwners?: Array<Record<string, unknown> & {
     id?: string;
     proofOfWealthUrl?: string;
@@ -637,6 +643,13 @@ export interface AdditionalDetailsPayload {
   otherFundingSource?: string;
   services?: string[];
   digitalAssetsServices?: string[];
+  // Settlement account the partner is paid into.
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  routingNumber?: string;
+  swiftCode?: string;
+  bankAddress?: string;
 }
 
 export function useUpdateAdditionalDetails() {
