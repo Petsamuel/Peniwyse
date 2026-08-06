@@ -31,9 +31,9 @@ const STATUS_KEYS = [
 ];
 
 const COMMENT_KEYS = [
+  "rejectionReason",
   "reviewComment",
   "reviewNote",
-  "rejectionReason",
   "rejectReason",
   "responseMessage",
   "responseDescription",
@@ -153,12 +153,32 @@ function companyDocuments(registration: Source): Array<Record<string, unknown>> 
   });
 }
 
-/** Finds the reviewer's verdict on a company document by its type id or name. */
-export function readCompanyDocumentReview(
+const DOCUMENT_URL_KEYS = [
+  "documentUrl",
+  "url",
+  "fileUrl",
+  "downloadUrl",
+  "contentUrl",
+  "path",
+];
+
+/** What the server holds for one company document type. */
+export interface CompanyDocument {
+  /** True when the partner has already uploaded a document of this type. */
+  uploaded: boolean;
+  url?: string;
+  title?: string;
+  review: DocumentReview;
+}
+
+const NO_COMPANY_DOCUMENT: CompanyDocument = { uploaded: false, review: EMPTY };
+
+/** Finds an uploaded company document by its type id or name. */
+export function readCompanyDocument(
   registration: Source,
   documentTypeId?: string,
   documentTypeName?: string,
-): DocumentReview {
+): CompanyDocument {
   const wantedName = documentTypeName?.trim().toLowerCase();
 
   const match = companyDocuments(registration).find((doc) => {
@@ -168,7 +188,14 @@ export function readCompanyDocumentReview(
     return !!wantedName && !!label && label === wantedName;
   });
 
-  return match ? readReview(match) : EMPTY;
+  if (!match) return NO_COMPANY_DOCUMENT;
+
+  return {
+    uploaded: true,
+    url: pickString(match, DOCUMENT_URL_KEYS),
+    title: pickString(match, ["title", "name", "fileName"]),
+    review: readReview(match),
+  };
 }
 
 // ─── Aggregate ───────────────────────────────────────────────────────────────
