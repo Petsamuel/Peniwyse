@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useUpdateContactInfo, RegistrationInfo } from "@/app/hooks/use-onboarding";
 import { MdOutlineEmail, MdOutlineLocationOn, MdOutlineMap, MdOutlineSignpost } from "react-icons/md";
-import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
+import PhoneInput, { parsePhoneNumber, isPossiblePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Select, { SingleValue, MultiValue, ActionMeta, ClassNamesConfig } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
@@ -237,6 +237,12 @@ export default function Step2ContactInfo() {
       return;
     }
 
+    if (!isPossiblePhoneNumber(phoneValue)) {
+      setMissingFields(["phoneValue"]);
+      setError("Please enter a complete phone number for the selected country.");
+      return;
+    }
+
     try {
       setError("");
       
@@ -327,6 +333,7 @@ export default function Step2ContactInfo() {
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone Number</label>
           <PhoneInput
             international
+            limitMaxLength
             defaultCountry="NG"
             value={phoneValue}
             onChange={(val) => {

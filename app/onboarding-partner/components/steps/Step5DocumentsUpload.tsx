@@ -39,6 +39,19 @@ import {
 
 type Tab = "Pending Actions" | "In Review" | "Completed";
 
+/**
+ * Every document on this step blocks submission, so each one is marked — the
+ * `required` flag from the document-types API only distinguishes degrees of a
+ * requirement the Submit button does not actually honour.
+ */
+function RequiredMark() {
+  return (
+    <span className="text-red-500" title="Required">
+      *
+    </span>
+  );
+}
+
 function RejectedBadge() {
   return (
     <span className="inline-flex items-center gap-1 align-middle px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-950/40 text-red-600 text-[11px] font-bold uppercase tracking-wide">
@@ -696,12 +709,7 @@ export default function Step5DocumentsUpload() {
                         <div className="flex-1">
                           <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
                             {docType.name}
-                            {!file &&
-                              !isOnFile &&
-                              docType.required &&
-                              !isRejected && (
-                                <span className="text-red-500">*</span>
-                              )}
+                            <RequiredMark />
                             {isRejected && <RejectedBadge />}
                             {isOnFile && entry && (
                               <StatusBadge review={entry.review} />
@@ -800,9 +808,7 @@ export default function Step5DocumentsUpload() {
                         <div className="flex-1">
                           <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
                             AML Due Diligence Questionnaire
-                            {!amlFile && !isOnFile && !isRejected && (
-                              <span className="text-red-500">*</span>
-                            )}
+                            <RequiredMark />
                             {isRejected && <RejectedBadge />}
                             {isOnFile && amlEntry && (
                               <StatusBadge review={amlEntry.review} />
@@ -971,12 +977,7 @@ export default function Step5DocumentsUpload() {
                             >
                               <div className="flex-1">
                                 <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1">
-                                  Identity Verification{" "}
-                                  {isCompleted ? (
-                                    <></>
-                                  ) : (
-                                    <span className="text-red-500">*</span>
-                                  )}
+                                  Identity Verification <RequiredMark />
                                 </h4>
                                 {isCompleted ? (
                                   <div className="mt-1 inline-flex items-center gap-1.5  dark:bg-emerald-950/40 text-emerald-600 rounded-md text-[10px] font-bold uppercase tracking-wid">
@@ -1082,9 +1083,7 @@ export default function Step5DocumentsUpload() {
                               <div className="flex-1">
                                 <h4 className="text-[15px] font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2 flex-wrap">
                                   {doc.docType}
-                                  {!isUploaded && !isRejected && (
-                                    <span className="text-red-500">*</span>
-                                  )}
+                                  <RequiredMark />
                                   {isRejected && <RejectedBadge />}
                                   {isUploaded &&
                                     !isRejected &&

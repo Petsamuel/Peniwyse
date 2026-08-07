@@ -6,7 +6,7 @@ import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBenefi
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import { MdOutlinePerson, MdAdd, MdDelete, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
-import PhoneInput, { parsePhoneNumber } from 'react-phone-number-input';
+import PhoneInput, { parsePhoneNumber, isPossiblePhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import Select, { SingleValue, MultiValue, ClassNamesConfig } from 'react-select';
 import CreatableSelect from 'react-select/creatable';
@@ -49,6 +49,18 @@ const getSelectClassNames = (hasIcon: boolean, isMissing: boolean = false): Clas
   multiValueLabel: () => "px-2 text-xs font-medium",
   multiValueRemove: () => "hover:bg-accent/20 hover:text-accent rounded-r-md px-1 py-1 cursor-pointer",
 });
+
+// BVN and NIN are both 11-digit Nigerian identifiers.
+const ID_NUMBER_LENGTH = 11;
+const DIGITS_ONLY_FIELDS = ["bvn", "nationalIdNumber"];
+const MINIMUM_AGE = 18;
+
+/** The latest date of birth that still makes someone 18 today, as yyyy-mm-dd. */
+function latestDateOfBirthForAdult() {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - MINIMUM_AGE);
+  return date.toISOString().split("T")[0];
+}
 
 const initialOwner: BeneficialOwnerPayload = {
   firstName: "",
@@ -264,9 +276,14 @@ export default function Step4BeneficialOwners() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === "ownershipPercentage" ? Number(value) : value 
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === "ownershipPercentage"
+        ? Number(value)
+        : DIGITS_ONLY_FIELDS.includes(name)
+          // Strip anything a keyboard or paste can smuggle in, then cap the length.
+          ? value.replace(/\D/g, "").slice(0, ID_NUMBER_LENGTH)
+          : value
     }));
     if (missingFields.includes(name)) {
       setMissingFields(prev => prev.filter(f => f !== name));
@@ -329,7 +346,32 @@ export default function Step4BeneficialOwners() {
       setError("Please fill in all required fields (Name, Email, Phone, DOB, Postal Code, Percentage, Source of Wealth), and select at least one Role.");
       return;
     }
-    
+
+    if (!isPossiblePhoneNumber(phoneValue)) {
+      setMissingFields(["phoneValue"]);
+      setError("Please enter a complete phone number for the selected country.");
+      return;
+    }
+
+    if (formData.dateOfBirth > latestDateOfBirthForAdult()) {
+      setMissingFields(["dateOfBirth"]);
+      setError(`A beneficial owner must be at least ${MINIMUM_AGE} years old.`);
+      return;
+    }
+
+    const invalidIdField = DIGITS_ONLY_FIELDS.find((field) => {
+      const value = formData[field as "bvn" | "nationalIdNumber"];
+      return value && value.length !== ID_NUMBER_LENGTH;
+    });
+    if (invalidIdField) {
+      setMissingFields([invalidIdField]);
+      setError(
+        `${invalidIdField === "bvn" ? "BVN" : "National ID Number"} must be exactly ${ID_NUMBER_LENGTH} digits.`,
+      );
+      return;
+    }
+
+
     if (totalPercentage + formData.ownershipPercentage > 100) {
       setError(`Cannot add owner: Total ownership would exceed 100% (currently ${totalPercentage}%).`);
       return;
@@ -826,11 +868,12 @@ export default function Step4BeneficialOwners() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone Number <span className="text-accent">*</span></label>
-              <PhoneInput international defaultCountry="NG" value={phoneValue} onChange={(val) => { setPhoneValue(val ? val.toString() : ""); if (missingFields.includes("phoneValue")) setMissingFields(prev => prev.filter(f => f !== "phoneValue")); }} className={getPhoneInputClassName()} />
+              <PhoneInput international limitMaxLength defaultCountry="NG" value={phoneValue} onChange={(val) => { setPhoneValue(val ? val.toString() : ""); if (missingFields.includes("phoneValue")) setMissingFields(prev => prev.filter(f => f !== "phoneValue")); }} className={getPhoneInputClassName()} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date of Birth <span className="text-accent">*</span></label>
-              <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} className={getInputClassName("dateOfBirth")} />
+              <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} max={latestDateOfBirthForAdult()} className={getInputClassName("dateOfBirth")} />
+              <p className="text-xs text-slate-400 mt-1">Must be at least {MINIMUM_AGE} years old</p>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ownership Percentage (%) <span className="text-accent">*</span></label>
@@ -838,11 +881,11 @@ export default function Step4BeneficialOwners() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">BVN</label>
-              <input type="text" name="bvn" value={formData.bvn} onChange={handleChange} className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm" />
+              <input type="text" inputMode="numeric" name="bvn" value={formData.bvn} onChange={handleChange} maxLength={ID_NUMBER_LENGTH} placeholder={`${ID_NUMBER_LENGTH} digits`} className={getInputClassName("bvn")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">National ID Number</label>
-              <input type="text" name="nationalIdNumber" value={formData.nationalIdNumber} onChange={handleChange} className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm" />
+              <input type="text" inputMode="numeric" name="nationalIdNumber" value={formData.nationalIdNumber} onChange={handleChange} maxLength={ID_NUMBER_LENGTH} placeholder={`${ID_NUMBER_LENGTH} digits`} className={getInputClassName("nationalIdNumber")} />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Street Address</label>
