@@ -1,7 +1,17 @@
 @import "tailwindcss";
 @source "./**/*.{tsx,ts,jsx,js}";
 
+/* This app ships in light mode only.
+   Tailwind v4 resolves `dark:` against `prefers-color-scheme` by default, so on
+   a machine set to dark every `dark:` utility fired and left dark text on dark
+   inputs. Binding the variant to a `.dark` class — which nothing applies —
+   keeps the rendering identical for every visitor. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
+  /* Native controls (date pickers, dropdowns, scrollbars) follow the OS unless
+     told otherwise. */
+  color-scheme: light;
   --background: #f1f5f9;
   --foreground: #0f172a;
   --surface: #ffffff;
