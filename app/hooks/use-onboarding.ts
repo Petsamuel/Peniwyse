@@ -13,7 +13,7 @@ interface ApiEnvelope {
 async function post(path: string, body: Record<string, JsonValue>) {
     const res: ApiEnvelope = await apiClient(path, { body })
     if (res.hasErrors) {
-        const errorMessage = res.errors?.length ? res.errors.join(", ") : res.message || `Failed: ${path}`
+        const errorMessage = res.errors?.length ? res.errors.join(". ") : res.message || `Failed: ${path}`
         throw new Error(errorMessage)
     }
     return res.data

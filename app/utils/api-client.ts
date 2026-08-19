@@ -66,8 +66,30 @@ export async function apiClient(
   }
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Something went wrong");
+    let errorText = "";
+    try {
+      const errorJson = await response.json();
+      if (errorJson && typeof errorJson === "object") {
+        if (Array.isArray(errorJson.errors) && errorJson.errors.length > 0) {
+          errorText = errorJson.errors.filter(Boolean).join(". ");
+        } else if (typeof errorJson.message === "string" && errorJson.message.trim()) {
+          errorText = errorJson.message.trim();
+        } else if (typeof errorJson.title === "string" && errorJson.title.trim()) {
+          errorText = errorJson.title.trim();
+        } else {
+          errorText = JSON.stringify(errorJson);
+        }
+      } else if (typeof errorJson === "string") {
+        errorText = errorJson;
+      }
+    } catch {
+      try {
+        errorText = await response.text();
+      } catch {
+        errorText = "Something went wrong";
+      }
+    }
+    throw new Error(errorText || response.statusText || "Something went wrong");
   }
 
   return response.json();
