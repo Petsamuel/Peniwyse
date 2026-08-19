@@ -311,16 +311,21 @@ export default function Step4BeneficialOwners() {
   const handleCountryChange = (newValue: SingleValue<OptionType> | MultiValue<OptionType>) => {
     const option = newValue as SingleValue<OptionType>;
     setFormData({ ...formData, country: option?.value || "", state: "", city: "" });
+    setMissingFields(prev => prev.filter(f => !["country", "state", "city"].includes(f)));
   };
 
   const handleStateChange = (newValue: SingleValue<OptionType> | MultiValue<OptionType>) => {
     const option = newValue as SingleValue<OptionType>;
     setFormData({ ...formData, state: option?.value || "", city: "" });
+    setMissingFields(prev => prev.filter(f => !["state", "city"].includes(f)));
   };
 
   const handleCityChange = (newValue: SingleValue<OptionType> | MultiValue<OptionType>) => {
     const option = newValue as SingleValue<OptionType>;
     setFormData({ ...formData, city: option?.value || "" });
+    if (missingFields.includes("city")) {
+      setMissingFields(prev => prev.filter(f => f !== "city"));
+    }
   };
 
   const handleAddOwner = async () => {
@@ -336,6 +341,12 @@ export default function Step4BeneficialOwners() {
     if (!formData.email) newMissingFields.push("email");
     if (!phoneValue) newMissingFields.push("phoneValue");
     if (!formData.dateOfBirth) newMissingFields.push("dateOfBirth");
+    if (!formData.bvn) newMissingFields.push("bvn");
+    if (!formData.nationalIdNumber) newMissingFields.push("nationalIdNumber");
+    if (!formData.streetAddress) newMissingFields.push("streetAddress");
+    if (!formData.country) newMissingFields.push("country");
+    if (!formData.state) newMissingFields.push("state");
+    if (!formData.city) newMissingFields.push("city");
     if (!formData.postalCode) newMissingFields.push("postalCode");
     if (!formData.ownershipPercentage) newMissingFields.push("ownershipPercentage");
     if (!formData.sourceOfWealth) newMissingFields.push("sourceOfWealth");
@@ -343,7 +354,7 @@ export default function Step4BeneficialOwners() {
 
     if (newMissingFields.length > 0) {
       setMissingFields(newMissingFields);
-      setError("Please fill in all required fields (Name, Email, Phone, DOB, Postal Code, Percentage, Source of Wealth), and select at least one Role.");
+      setError("Please fill in all required fields, and select at least one Role.");
       return;
     }
 
@@ -848,71 +859,74 @@ export default function Step4BeneficialOwners() {
 
       {isAdding && (
         <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm mb-8 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            <MdOutlinePerson className="text-accent" />
-            New Beneficial Owner
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-6">
+            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+              <MdOutlinePerson className="text-accent" />
+              New Beneficial Owner
+            </h3>
+            <span className="text-xs text-slate-400">Fields marked with <span className="text-red-500 font-bold">*</span> are mandatory</span>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">First Name <span className="text-red-500">*</span></label>
               <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className={getInputClassName("firstName")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Last Name <span className="text-red-500">*</span></label>
               <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className={getInputClassName("lastName")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email <span className="text-red-500">*</span></label>
               <input type="email" name="email" value={formData.email} onChange={handleChange} className={getInputClassName("email")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone Number <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
               <PhoneInput international limitMaxLength defaultCountry="NG" value={phoneValue} onChange={(val) => { setPhoneValue(val ? val.toString() : ""); if (missingFields.includes("phoneValue")) setMissingFields(prev => prev.filter(f => f !== "phoneValue")); }} className={getPhoneInputClassName()} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Date of Birth <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Date of Birth <span className="text-red-500">*</span></label>
               <input type="date" name="dateOfBirth" value={formData.dateOfBirth} onChange={handleChange} max={latestDateOfBirthForAdult()} className={getInputClassName("dateOfBirth")} />
               <p className="text-xs text-slate-400 mt-1">Must be at least {MINIMUM_AGE} years old</p>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Ownership Percentage (%) <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ownership Percentage (%) <span className="text-red-500">*</span></label>
               <input type="number" name="ownershipPercentage" value={formData.ownershipPercentage || ""} onChange={handleChange} min="0" max="100" className={getInputClassName("ownershipPercentage")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">BVN</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">BVN <span className="text-red-500">*</span></label>
               <input type="text" inputMode="numeric" name="bvn" value={formData.bvn} onChange={handleChange} maxLength={ID_NUMBER_LENGTH} placeholder={`${ID_NUMBER_LENGTH} digits`} className={getInputClassName("bvn")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">National ID Number</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">National ID Number (NIN) <span className="text-red-500">*</span></label>
               <input type="text" inputMode="numeric" name="nationalIdNumber" value={formData.nationalIdNumber} onChange={handleChange} maxLength={ID_NUMBER_LENGTH} placeholder={`${ID_NUMBER_LENGTH} digits`} className={getInputClassName("nationalIdNumber")} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Street Address</label>
-              <input type="text" name="streetAddress" value={formData.streetAddress} onChange={handleChange} className="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm" />
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Street Address <span className="text-red-500">*</span></label>
+              <input type="text" name="streetAddress" value={formData.streetAddress} onChange={handleChange} className={getInputClassName("streetAddress")} />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Country</label>
-              <Select unstyled classNames={getSelectClassNames(false)} options={countryOptions} value={selectedCountryOption} onChange={handleCountryChange} placeholder="Select Country" isClearable isSearchable />
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Country <span className="text-red-500">*</span></label>
+              <Select unstyled classNames={getSelectClassNames(false, missingFields.includes("country"))} options={countryOptions} value={selectedCountryOption} onChange={handleCountryChange} placeholder="Select Country" isClearable isSearchable />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">State/Province</label>
-              <Select unstyled classNames={getSelectClassNames(false)} options={stateOptions} value={selectedStateOption} onChange={handleStateChange} placeholder={countryIsoCode ? "Select State" : "Select Country first"} isDisabled={!countryIsoCode} isClearable isSearchable />
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">State/Province <span className="text-red-500">*</span></label>
+              <Select unstyled classNames={getSelectClassNames(false, missingFields.includes("state"))} options={stateOptions} value={selectedStateOption} onChange={handleStateChange} placeholder={countryIsoCode ? "Select State" : "Select Country first"} isDisabled={!countryIsoCode} isClearable isSearchable />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">City</label>
-              <CreatableSelect unstyled classNames={getSelectClassNames(false)} options={cityOptions} value={selectedCityOption} onChange={handleCityChange} placeholder={formData.state ? "Select or type your city" : "Select State first"} isDisabled={!formData.state} formatCreateLabel={(input) => `Use "${input}"`} isClearable isSearchable />
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">City <span className="text-red-500">*</span></label>
+              <CreatableSelect unstyled classNames={getSelectClassNames(false, missingFields.includes("city"))} options={cityOptions} value={selectedCityOption} onChange={handleCityChange} placeholder={formData.state ? "Select or type your city" : "Select State first"} isDisabled={!formData.state} formatCreateLabel={(input) => `Use "${input}"`} isClearable isSearchable />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Postal Code <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Postal Code <span className="text-red-500">*</span></label>
               <input type="text" name="postalCode" value={formData.postalCode} onChange={handleChange} className={getInputClassName("postalCode")} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Source of Wealth <span className="text-accent">*</span></label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Source of Wealth <span className="text-red-500">*</span></label>
               <input type="text" name="sourceOfWealth" value={formData.sourceOfWealth} onChange={handleChange} className={getInputClassName("sourceOfWealth")} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Role(s) in the Company</label>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Role(s) in the Company <span className="text-red-500">*</span></label>
               <p className="text-xs text-slate-500 mb-3">Select all that apply.</p>
               <Select
                 isMulti
