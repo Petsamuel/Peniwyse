@@ -80,15 +80,29 @@ export default function LoginPage() {
             import("@/app/utils/auth").then(({ setClientToken }) => {
               setClientToken(token);
               if (profile) {
-                sessionStorage.setItem("userProfile", JSON.stringify(profile));
+                const serializedProfile = JSON.stringify(profile);
+                sessionStorage.setItem("userProfile", serializedProfile);
+                localStorage.setItem("userProfile", serializedProfile);
               }
               if (registration) {
-                sessionStorage.setItem(
-                  "userRegistration",
-                  JSON.stringify(registration),
-                );
+                const serializedReg = JSON.stringify(registration);
+                sessionStorage.setItem("userRegistration", serializedReg);
+                localStorage.setItem("userRegistration", serializedReg);
+                if (registration.rcNumber) {
+                  sessionStorage.setItem("rcNumber", registration.rcNumber);
+                  localStorage.setItem("rcNumber", registration.rcNumber);
+                }
+                if (registration.companyId) {
+                  sessionStorage.setItem("companyId", registration.companyId);
+                  localStorage.setItem("companyId", registration.companyId);
+                }
               } else {
                 sessionStorage.removeItem("userRegistration");
+                localStorage.removeItem("userRegistration");
+                sessionStorage.removeItem("rcNumber");
+                localStorage.removeItem("rcNumber");
+                sessionStorage.removeItem("companyId");
+                localStorage.removeItem("companyId");
               }
               refreshFromToken();
               success("Login Successful", "You will be redirected shortly.");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useUpdateContactInfo, RegistrationInfo } from "@/app/hooks/use-onboarding";
 import { MdOutlineEmail, MdOutlineLocationOn, MdOutlineMap, MdOutlineSignpost } from "react-icons/md";
@@ -65,6 +65,30 @@ export default function Step2ContactInfo() {
       ? `${registrationData.phoneCountryCode}${registrationData.phoneNumber}`
       : ""
   );
+
+  useEffect(() => {
+    if (registrationData) {
+      setFormData(prev => ({
+        businessEmail: registrationData.businessEmail || prev.businessEmail,
+        streetAddress: registrationData.streetAddress || prev.streetAddress,
+        country: registrationData.country || prev.country,
+        state: registrationData.state || prev.state,
+        city: registrationData.city || prev.city,
+        postalCode: registrationData.postalCode || prev.postalCode,
+        operatingStreetAddress: registrationData.operatingStreetAddress || prev.operatingStreetAddress,
+        operatingCountry: registrationData.operatingCountry || prev.operatingCountry,
+        operatingState: registrationData.operatingState || prev.operatingState,
+        operatingCity: registrationData.operatingCity || prev.operatingCity,
+        operatingPostalCode: registrationData.operatingPostalCode || prev.operatingPostalCode,
+      }));
+      if (registrationData.phoneCountryCode && registrationData.phoneNumber) {
+        setPhoneValue(`${registrationData.phoneCountryCode}${registrationData.phoneNumber}`);
+      }
+      if (registrationData.operatingStreetAddress && registrationData.operatingStreetAddress !== registrationData.streetAddress) {
+        setIsOperatingSame(false);
+      }
+    }
+  }, [registrationData]);
 
   const [error, setError] = useState("");
   const [missingFields, setMissingFields] = useState<string[]>([]);

@@ -15,6 +15,14 @@ export default function Header() {
   const handleLogout = () => {
     clearClientToken();
     localStorage.removeItem("peniwyse_role");
+    sessionStorage.removeItem("userRegistration");
+    localStorage.removeItem("userRegistration");
+    sessionStorage.removeItem("userProfile");
+    localStorage.removeItem("userProfile");
+    sessionStorage.removeItem("rcNumber");
+    localStorage.removeItem("rcNumber");
+    sessionStorage.removeItem("companyId");
+    localStorage.removeItem("companyId");
     window.location.href = "/login";
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import {
   useUpdateAdditionalDetails,
@@ -90,6 +90,44 @@ export default function Step3AdditionalDetails() {
         []
       )?.map((s: string) => ({ value: s, label: s })) || [],
     );
+
+  useEffect(() => {
+    if (registrationData) {
+      setFormData(prev => ({
+        businessDescription: registrationData.businessDescription || prev.businessDescription,
+        estimatedMonthlyVolume: registrationData.estimatedMonthlyVolume || prev.estimatedMonthlyVolume,
+        estimatedAnnualRevenue: registrationData.estimatedAnnualRevenue || prev.estimatedAnnualRevenue,
+        bankName: registrationData.bankName || prev.bankName,
+        accountName: registrationData.accountName || prev.accountName,
+        accountNumber: registrationData.accountNumber || prev.accountNumber,
+        routingNumber: registrationData.routingNumber || prev.routingNumber,
+        swiftCode: registrationData.swiftCode || prev.swiftCode,
+        bankAddress: registrationData.bankAddress || prev.bankAddress,
+      }));
+      if (registrationData.primaryFundingSource) {
+        const isDefault = defaultFundingSources.includes(registrationData.primaryFundingSource);
+        setFundingSourceSelect(isDefault ? registrationData.primaryFundingSource : "Other");
+        setCustomFundingSource(
+          registrationData.otherFundingSource ||
+            (!isDefault ? registrationData.primaryFundingSource : ""),
+        );
+      }
+      const services =
+        registrationData.servicesRequested || registrationData.services || [];
+      if (services.length > 0) {
+        setSelectedServices(services.map((s: string) => ({ value: s, label: s })));
+      }
+      const digitalServices =
+        registrationData.digitalAssetServices ||
+        registrationData.digitalAssetsServices ||
+        [];
+      if (digitalServices.length > 0) {
+        setSelectedDigitalAssetsServices(
+          digitalServices.map((s: string) => ({ value: s, label: s })),
+        );
+      }
+    }
+  }, [registrationData]);
 
   const [error, setError] = useState("");
   const [missingFields, setMissingFields] = useState<string[]>([]);

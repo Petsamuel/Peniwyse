@@ -39,7 +39,8 @@ const STEP_NAMES = [
 export const DOCUMENTS_STEP = STEP_NAMES.indexOf("documents-upload");
 
 /** The step named in the URL, or 0 when there isn't a usable one. */
-function readStepFromUrl() {
+function readStepFromUrl(): number {
+  if (typeof window === "undefined") return 0;
   const step = new URLSearchParams(window.location.search).get("step");
   if (!step) return 0;
 
@@ -51,23 +52,139 @@ function readStepFromUrl() {
   return 0;
 }
 
-/** The RC number stored at login, or null when it is absent or a placeholder. */
-function readStoredRcNumber() {
+/** Saves registration data and identifiers to both sessionStorage and localStorage */
+export function saveStoredRegistration(data: Partial<RegistrationInfo> | null) {
+  if (typeof window === "undefined" || !data) return;
   try {
-    const stored = sessionStorage.getItem("userRegistration");
+    const existingStr = sessionStorage.getItem("userRegistration") || localStorage.getItem("userRegistration");
+    let existingObj: Record<string, unknown> = {};
+    if (existingStr) {
+      try {
+        existingObj = JSON.parse(existingStr);
+      } catch {
+        // ignore
+      }
+    }
+    const merged = { ...existingObj, ...data };
+    const serialized = JSON.stringify(merged);
+    sessionStorage.setItem("userRegistration", serialized);
+    localStorage.setItem("userRegistration", serialized);
+
+    if (data.rcNumber && typeof data.rcNumber === "string" && data.rcNumber.trim() && data.rcNumber !== "STRING") {
+      sessionStorage.setItem("rcNumber", data.rcNumber.trim());
+      localStorage.setItem("rcNumber", data.rcNumber.trim());
+    }
+    if (data.companyId && typeof data.companyId === "string" && data.companyId.trim()) {
+      sessionStorage.setItem("companyId", data.companyId.trim());
+      localStorage.setItem("companyId", data.companyId.trim());
+    }
+  } catch (e) {
+    console.error("Failed to save registration to storage", e);
+  }
+}
+
+/** The RC number stored in session or local storage, or null when absent. */
+export function readStoredRcNumber(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    // 1. Direct rcNumber key
+    const directSession = sessionStorage.getItem("rcNumber");
+    if (directSession && directSession.trim() && directSession !== "STRING") {
+      return directSession.trim();
+    }
+    const directLocal = localStorage.getItem("rcNumber");
+    if (directLocal && directLocal.trim() && directLocal !== "STRING") {
+      return directLocal.trim();
+    }
+
+    // 2. userRegistration in sessionStorage
+    const storedSession = sessionStorage.getItem("userRegistration");
+    if (storedSession) {
+      const rc = JSON.parse(storedSession)?.rcNumber;
+      if (typeof rc === "string" && rc.trim() && rc !== "STRING") {
+        return rc.trim();
+      }
+    }
+
+    // 3. userRegistration in localStorage
+    const storedLocal = localStorage.getItem("userRegistration");
+    if (storedLocal) {
+      const rc = JSON.parse(storedLocal)?.rcNumber;
+      if (typeof rc === "string" && rc.trim() && rc !== "STRING") {
+        return rc.trim();
+      }
+    }
+
+    // 4. Check userProfile
+    const profileSession = sessionStorage.getItem("userProfile") || localStorage.getItem("userProfile");
+    if (profileSession) {
+      const parsed = JSON.parse(profileSession);
+      const rc = parsed?.rcNumber || parsed?.registrationNumber;
+      if (typeof rc === "string" && rc.trim() && rc !== "STRING") {
+        return rc.trim();
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/** The cached registration from a previous visit, or null when absent. */
+export function readStoredRegistration(): RegistrationInfo | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored =
+      sessionStorage.getItem("userRegistration") ||
+      localStorage.getItem("userRegistration");
     if (!stored) return null;
-    const rcNumber = JSON.parse(stored)?.rcNumber;
-    return typeof rcNumber === "string" && rcNumber.trim() !== "" && rcNumber !== "STRING"
-      ? rcNumber
-      : null;
+    const parsed = JSON.parse(stored);
+    // The login response caches a thin summary under the same key; without a
+    // company there is nothing worth restoring a step from.
+    return parsed?.companyId || parsed?.rcNumber ? parsed : null;
   } catch {
     return null;
   }
 }
 
+/** The first step the partner has not finished, from saved progress flags. */
+function firstIncompleteStep(data: RegistrationInfo): number {
+  if (!data.basicInfoCompleted) return 1;
+  if (!data.contactInfoCompleted) return 2;
+  if (!data.additionalDetailsCompleted) return 3;
+  if (!data.beneficialOwnersCompleted) return 4;
+  if (!data.documentsCompleted) return 5;
+  return 6;
+}
+
+/** The companyId stored in session or local storage, or null when absent. */
+export function readStoredCompanyId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const directSession = sessionStorage.getItem("companyId");
+    if (directSession && directSession.trim()) return directSession.trim();
+
+    const directLocal = localStorage.getItem("companyId");
+    if (directLocal && directLocal.trim()) return directLocal.trim();
+
+    const storedSession = sessionStorage.getItem("userRegistration");
+    if (storedSession) {
+      const id = JSON.parse(storedSession)?.companyId;
+      if (typeof id === "string" && id.trim()) return id.trim();
+    }
+
+    const storedLocal = localStorage.getItem("userRegistration");
+    if (storedLocal) {
+      const id = JSON.parse(storedLocal)?.companyId;
+      if (typeof id === "string" && id.trim()) return id.trim();
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function OnboardingProvider({ children }: { children: ReactNode }) {
-  // Starts at 0 on both server and client — the URL is read after mount, so the
-  // server never renders one step only for hydration to swap in another.
   const [currentStep, setCurrentStepState] = useState(0);
 
   const setCurrentStep = (step: number | ((prev: number) => number)) => {
@@ -83,18 +200,41 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-  const [companyId, setCompanyId] = useState<string | null>(null);
-  const [registrationData, setRegistrationData] = useState<RegistrationInfo | null>(null);
-  // Assume a restore is needed until the mount effect has read the URL, so no
-  // step renders before we know which one it should be.
+  // Both start empty on the server *and* on the client's first render. Reading
+  // storage in a `useState` initializer runs during render, so the server would
+  // send an empty sidebar while hydration rendered a restored one — a mismatch
+  // React reports as an error. The saved application is loaded on mount instead.
+  const [companyId, setCompanyIdState] = useState<string | null>(null);
+  const [registrationData, setRegistrationDataState] =
+    useState<RegistrationInfo | null>(null);
+
+  const setCompanyId = (id: string | null) => {
+    setCompanyIdState(id);
+    if (id) {
+      saveStoredRegistration({ companyId: id });
+    }
+  };
+
+  const setRegistrationData: Dispatch<SetStateAction<RegistrationInfo | null>> = (
+    dataOrUpdater
+  ) => {
+    setRegistrationDataState((prev) => {
+      const next = typeof dataOrUpdater === "function" ? dataOrUpdater(prev) : dataOrUpdater;
+      if (next) {
+        saveStoredRegistration(next);
+      }
+      return next;
+    });
+  };
+
+  // Assume a restore is needed until the mount effect has read the storage & URL
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const lastRefreshedRcNumber = useRef<string | null>(null);
   const autoJumpedForCompany = useRef<string | null>(null);
 
   /**
    * A rejected document can only be acted on from the documents step, so take
-   * the partner there as soon as we learn about it. Once per company — after
-   * that they are free to move around without being pulled back.
+   * the partner there as soon as we learn about it. Once per company.
    */
   const jumpToRejectedDocuments = (data: RegistrationInfo | null) => {
     if (!data) return false;
@@ -110,13 +250,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const lookupCompany = useLookupCompany();
 
   /**
-   * Re-reads the registration from the server and merges it in.
-   *
-   * Several endpoints (document completion, submission) answer with a small
-   * status object rather than the whole registration, so callers must merge
-   * instead of replace — otherwise the RC number is lost and nothing can be
-   * fetched again. The RC number falls back to the one stored at login for the
-   * same reason.
+   * Re-reads the registration from the server (by RC number) and merges it in.
    */
   const refreshRegistration = async (): Promise<RegistrationInfo | null> => {
     const rcNumber = registrationData?.rcNumber || readStoredRcNumber();
@@ -127,45 +261,61 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     if (!data) return null;
 
     lastRefreshedRcNumber.current = rcNumber;
-    if (data.companyId) setCompanyId(data.companyId);
+    if (data.companyId) setCompanyIdState(data.companyId);
     setRegistrationData(prev => ({ ...(prev || {}), ...data }) as RegistrationInfo);
+    saveStoredRegistration(data);
     return data;
   };
 
   /**
    * Restores the session after a page refresh.
    *
-   * The step survives a reload through the `step` query param, but the
-   * registration itself lives in memory only — and the lookup that fetches it
-   * belongs to Step 0, which is not mounted on any later step. Without this the
-   * partner reloads onto a step with no company: an empty sidebar, 0% progress
-   * and a submit that fails for a missing company id.
+   * The cached copy is applied first so the partner's details are on screen
+   * immediately — waiting on the network here is what made a refresh look like
+   * it had wiped everything. The server is then read in the background and
+   * merged over the top.
    */
   /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps --
-     the URL and sessionStorage can only be read once mounted, so the restored
-     step and registration necessarily land as state from here. */
+     storage and the URL can only be read once mounted, so the restored step and
+     registration necessarily land as state from here. */
   useEffect(() => {
-    const targetStep = readStepFromUrl();
-    const storedRcNumber = readStoredRcNumber();
+    const cached = readStoredRegistration();
+    const storedRcNumber = cached?.rcNumber || readStoredRcNumber();
+    const stepFromUrl = readStepFromUrl();
 
-    // Step 0 restores itself: it runs the same lookup from the stored RC number
-    // and picks the step to resume on. Nothing stored means nothing to restore,
-    // so leave them on step 0 to search rather than on a step with no company.
-    if (targetStep === 0 || !storedRcNumber) {
+    /** The URL wins; otherwise resume where the saved progress left off. */
+    const resumeTo = (data: RegistrationInfo) => {
+      if (jumpToRejectedDocuments(data)) return;
+      setCurrentStep(stepFromUrl > 0 ? stepFromUrl : firstIncompleteStep(data));
+    };
+
+    if (cached) {
+      setRegistrationDataState(cached);
+      if (cached.companyId) setCompanyIdState(cached.companyId);
+      resumeTo(cached);
       setIsRestoringSession(false);
-      return;
+    } else {
+      const storedCompanyId = readStoredCompanyId();
+      if (storedCompanyId) setCompanyIdState(storedCompanyId);
+      // No cached copy: hold on the loader rather than mounting a later step
+      // whose form would initialise with nothing in it.
+      if (!storedRcNumber) setIsRestoringSession(false);
     }
 
-    lastRefreshedRcNumber.current = storedRcNumber;
+    if (!storedRcNumber) return;
 
-    lookupCompany.mutateAsync(storedRcNumber)
+    lastRefreshedRcNumber.current = storedRcNumber;
+    lookupCompany
+      .mutateAsync(storedRcNumber)
       .then(res => {
         const data = res?.data;
-        if (!data?.companyId) return; // stays on step 0
+        if (!data?.companyId) return;
 
-        setCompanyId(data.companyId);
-        setRegistrationData(data);
-        if (!jumpToRejectedDocuments(data)) setCurrentStep(targetStep);
+        setCompanyIdState(data.companyId);
+        setRegistrationDataState(data);
+        saveStoredRegistration(data);
+        if (cached) jumpToRejectedDocuments(data);
+        else resumeTo(data);
       })
       .catch(err => {
         console.error("Failed to restore onboarding session", err);
@@ -174,6 +324,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
+  // Refresh data on step changes if RC number is available
   useEffect(() => {
     if (!registrationData?.rcNumber) return;
     if (lastRefreshedRcNumber.current === registrationData.rcNumber) return;
@@ -184,11 +335,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       .then(res => {
         if (res?.data) {
           setRegistrationData(res.data);
+          saveStoredRegistration(res.data);
           jumpToRejectedDocuments(res.data);
         }
       })
       .catch(err => console.error("Failed to refresh profile on step change", err));
-  }, [currentStep, registrationData?.rcNumber]);
+  }, [currentStep, registrationData?.rcNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markStepCompleted = (step: number) => {
     setCompletedSteps((prev) => (prev.includes(step) ? prev : [...prev, step]));

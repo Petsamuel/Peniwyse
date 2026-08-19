@@ -1,7 +1,7 @@
 "use client";
 
 import { useOnboardingPartner } from "../../context/OnboardingContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUpdateBasicInfo, RegistrationInfo } from "@/app/hooks/use-onboarding";
 import { z } from "zod";
 
@@ -33,6 +33,21 @@ export default function Step1BasicInfo() {
     taxId: registrationData?.taxId || "",
     website: initialWebsite.replace(/^https?:\/\//, ""),
   });
+
+  useEffect(() => {
+    if (registrationData) {
+      setFormData((prev) => ({
+        legalName: registrationData.legalBusinessName || prev.legalName,
+        tradingName: registrationData.tradingName || prev.tradingName,
+        businessType: registrationData.businessType || prev.businessType,
+        country: registrationData.countryOfIncorporation || prev.country,
+        dateOfIncorporation: registrationData.dateOfIncorporation?.split("T")[0] || prev.dateOfIncorporation,
+        registrationNumber: registrationData.rcNumber || prev.registrationNumber,
+        taxId: registrationData.taxId || prev.taxId,
+        website: registrationData.website ? registrationData.website.replace(/^https?:\/\//, "") : prev.website,
+      }));
+    }
+  }, [registrationData]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

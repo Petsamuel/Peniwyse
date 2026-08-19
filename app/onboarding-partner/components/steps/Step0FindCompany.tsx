@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useOnboardingPartner } from "../../context/OnboardingContext";
+import { useOnboardingPartner, saveStoredRegistration, readStoredRcNumber } from "../../context/OnboardingContext";
 import { MdOutlineBusinessCenter, MdSearch, MdArrowForward, MdOutlineAddBusiness, MdOutlineCancel, MdEdit } from "react-icons/md";
 import { useLookupCompany, useStartRegistration, RegistrationInfo } from "@/app/hooks/use-onboarding";
 
@@ -19,7 +19,7 @@ export default function Step0FindCompany() {
     
     setSearchStatus("idle");
     try {
-      const response = await lookupCompany.mutateAsync(queryRc);
+      const response = await lookupCompany.mutateAsync(queryRc.trim());
       const data = response?.data;
       
       // API response: { data: RegistrationInfo }
@@ -29,6 +29,7 @@ export default function Step0FindCompany() {
         setSearchStatus("found");
         setCompanyId(companyIdFromResponse);
         setRegistrationData(data);
+        saveStoredRegistration(data);
         
         // Determine the next incomplete step
         let targetStep = 1;
@@ -40,41 +41,31 @@ export default function Step0FindCompany() {
         else targetStep = 6;
 
         // Small delay to show the "found" state before transitioning.
-        // A rejected document outranks the "next incomplete step" guess — the
-        // application looks complete, but the partner has work waiting on step 5.
         setTimeout(() => {
           if (!jumpToRejectedDocuments(data)) setCurrentStep(targetStep);
         }, 800);
       } else {
         setSearchStatus("not_found");
       }
-    } catch (err) {
+    } catch {
       setSearchStatus("not_found");
     }
   };
 
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps --
+     the stored RC number can only be read once mounted, and it seeds the field
+     the partner sees. */
   useEffect(() => {
     if (hasAutoSearched.current) return;
-    
-    const storedReg = sessionStorage.getItem("userRegistration");
-    if (storedReg) {
-      try {
-        const parsedReg = JSON.parse(storedReg);
-        const storedRc = parsedReg.rcNumber;
-        
-        // Ensure rcNumber exists, is not empty, and isn't a placeholder like "STRING"
-        if (storedRc && typeof storedRc === 'string' && storedRc.trim() !== "" && storedRc !== "STRING") {
-          hasAutoSearched.current = true;
-          setTimeout(() => {
-            setRcNumber(storedRc);
-            performSearch(storedRc);
-          }, 0);
-        }
-      } catch (e) {
-        // ignore
-      }
+
+    const storedRc = readStoredRcNumber();
+    if (storedRc && storedRc.trim() !== "" && storedRc !== "STRING") {
+      hasAutoSearched.current = true;
+      setRcNumber(storedRc);
+      performSearch(storedRc);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +94,7 @@ export default function Step0FindCompany() {
           businessDescription: form.natureOfBusiness || "",
         } as RegistrationInfo;
         setRegistrationData(mappedData);
+        saveStoredRegistration(mappedData);
         
         setCurrentStep(1);
       } else {
