@@ -37,6 +37,8 @@ export default function Step1BasicInfo() {
     website: initialWebsite.replace(/^https?:\/\//, ""),
   });
 
+  /* eslint-disable react-hooks/set-state-in-effect -- the registration arrives
+     from the server after this form has mounted, so the fields are seeded here. */
   useEffect(() => {
     if (registrationData) {
       setFormData((prev) => ({
@@ -51,6 +53,7 @@ export default function Step1BasicInfo() {
       }));
     }
   }, [registrationData]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
