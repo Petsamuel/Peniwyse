@@ -3,8 +3,11 @@
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useState, useEffect } from "react";
 import { useUpdateBasicInfo, RegistrationInfo } from "@/app/hooks/use-onboarding";
+import { normalizeText } from "@/app/utils/format";
 import { z } from "zod";
 
+// Validated against normalized values — otherwise a lone space satisfies
+// `min(1)` and passes as a company name.
 const basicInfoSchema = z.object({
   legalName: z.string().min(1, "Legal Business Name is required"),
   tradingName: z.string().optional(),
@@ -67,6 +70,15 @@ export default function Step1BasicInfo() {
     }
   };
 
+  /** Tidies a text field the moment focus leaves it, rather than at submit. */
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const cleaned = normalizeText(value);
+    if (cleaned !== value) {
+      setFormData((prev) => ({ ...prev, [name]: cleaned }));
+    }
+  };
+
   const getInputClassName = (fieldName: string) => {
     const hasError = !!errors[fieldName];
     return `w-full h-12 px-4 rounded-xl border ${hasError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-slate-200 focus:border-accent focus:ring-accent'} focus:outline-none focus:ring-1 transition-colors bg-white text-sm`;
@@ -90,7 +102,21 @@ export default function Step1BasicInfo() {
       return;
     }
 
-    const validation = basicInfoSchema.safeParse(formData);
+    // Clean the text fields once, then validate, save and display that same
+    // value — so what the partner ends up seeing is exactly what was stored.
+    const cleaned = {
+      ...formData,
+      legalName: normalizeText(formData.legalName),
+      tradingName: normalizeText(formData.tradingName),
+      businessType: normalizeText(formData.businessType),
+      country: normalizeText(formData.country),
+      registrationNumber: normalizeText(formData.registrationNumber),
+      taxId: normalizeText(formData.taxId),
+      website: formData.website.trim(),
+    };
+    setFormData(cleaned);
+
+    const validation = basicInfoSchema.safeParse(cleaned);
     if (!validation.success) {
       const newErrors: Record<string, string> = {};
       validation.error.issues.forEach((issue: z.ZodIssue) => {
@@ -107,14 +133,14 @@ export default function Step1BasicInfo() {
       const data = await updateBasicInfo.mutateAsync({
         companyId,
         payload: {
-          legalBusinessName: formData.legalName,
-          tradingName: formData.tradingName,
-          businessType: formData.businessType,
-          countryOfIncorporation: formData.country,
-          dateOfIncorporation: formData.dateOfIncorporation,
-          registrationNumber: formData.registrationNumber,
-          taxId: formData.taxId,
-          website: formData.website ? `https://${formData.website}` : "",
+          legalBusinessName: cleaned.legalName,
+          tradingName: cleaned.tradingName,
+          businessType: cleaned.businessType,
+          countryOfIncorporation: cleaned.country,
+          dateOfIncorporation: cleaned.dateOfIncorporation,
+          registrationNumber: cleaned.registrationNumber,
+          taxId: cleaned.taxId,
+          website: cleaned.website ? `https://${cleaned.website}` : "",
         },
       });
       setRegistrationData((prev) => 
@@ -148,6 +174,7 @@ export default function Step1BasicInfo() {
               placeholder="Company name"
               value={formData.legalName}
               onChange={handleChange}
+              onBlur={handleBlur}
               className={getInputClassName("legalName")}
             />
             {errors.legalName && <span className="text-xs text-red-500">{errors.legalName}</span>}
@@ -161,6 +188,7 @@ export default function Step1BasicInfo() {
               name="tradingName"
               value={formData.tradingName}
               onChange={handleChange}
+              onBlur={handleBlur}
               className={getInputClassName("tradingName")}
             />
           </div>
@@ -252,6 +280,7 @@ export default function Step1BasicInfo() {
               name="registrationNumber"
               value={formData.registrationNumber}
               onChange={handleChange}
+              onBlur={handleBlur}
               className={getInputClassName("registrationNumber")}
             />
             {errors.registrationNumber && <span className="text-xs text-red-500">{errors.registrationNumber}</span>}
@@ -267,6 +296,7 @@ export default function Step1BasicInfo() {
               name="taxId"
               value={formData.taxId}
               onChange={handleChange}
+              onBlur={handleBlur}
               className={getInputClassName("taxId")}
             />
             {errors.taxId && <span className="text-xs text-red-500">{errors.taxId}</span>}

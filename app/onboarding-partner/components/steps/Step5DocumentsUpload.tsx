@@ -27,6 +27,7 @@ import {
   MdCancel,
 } from "react-icons/md";
 import { uploadRespondentDocument } from "@/app/utils/api/respondents";
+import { normalizeText } from "@/app/utils/format";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import {
@@ -573,7 +574,10 @@ export default function Step5DocumentsUpload() {
       (id) => getDocumentState(id).isRejected,
     ).length + allShareholderDocs.filter((doc) => doc.isRejected).length;
 
-  const companyInitials = registrationData?.legalBusinessName ?? "Company";
+  // Normalized on the way out too, so a name saved before this was cleaned up
+  // still renders without its stray spaces.
+  const companyInitials =
+    normalizeText(registrationData?.legalBusinessName) || "Company";
 
   return (
     <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl mt-6">

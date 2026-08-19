@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useOnboardingPartner } from "../../context/OnboardingContext";
 import { useUpdateBeneficialOwners, useCompleteBeneficialOwners, useVerifyBeneficialOwner, useUploadShareholderDocument, useLookupCompany, useDeleteBeneficialOwner, BeneficialOwnerPayload } from "@/app/hooks/use-onboarding";
+import { normalizeText } from "@/app/utils/format";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
 import { MdOutlinePerson, MdAdd, MdDelete, MdErrorOutline, MdLink, MdContentCopy, MdRefresh, MdKeyboardArrowDown, MdKeyboardArrowUp, MdOutlineCloudUpload } from "react-icons/md";
@@ -52,6 +53,7 @@ const getSelectClassNames = (hasIcon: boolean, isMissing: boolean = false): Clas
 
 // BVN and NIN are both 11-digit Nigerian identifiers.
 const ID_NUMBER_LENGTH = 11;
+const MAX_PERCENTAGE_LENGTH = 3;
 const DIGITS_ONLY_FIELDS = ["bvn", "nationalIdNumber"];
 const MINIMUM_AGE = 18;
 
@@ -279,7 +281,7 @@ export default function Step4BeneficialOwners() {
     setFormData(prev => ({
       ...prev,
       [name]: name === "ownershipPercentage"
-        ? Number(value)
+        ? Number(value.replace(/\D/g, "").slice(0, MAX_PERCENTAGE_LENGTH))
         : DIGITS_ONLY_FIELDS.includes(name)
           // Strip anything a keyboard or paste can smuggle in, then cap the length.
           ? value.replace(/\D/g, "").slice(0, ID_NUMBER_LENGTH)
@@ -383,6 +385,12 @@ export default function Step4BeneficialOwners() {
     }
 
 
+    if (formData.ownershipPercentage < 1 || formData.ownershipPercentage > 100) {
+      setMissingFields(["ownershipPercentage"]);
+      setError("Ownership percentage must be between 1% and 100%.");
+      return;
+    }
+
     if (totalPercentage + formData.ownershipPercentage > 100) {
       setError(`Cannot add owner: Total ownership would exceed 100% (currently ${totalPercentage}%).`);
       return;
@@ -401,7 +409,18 @@ export default function Step4BeneficialOwners() {
 
     try {
       setIsSubmitting(true);
-      const payload = { ...formData, phoneCountryCode, phoneNumber };
+      // Names and addresses are rendered straight onto the owner cards, so they
+      // are tidied before they are stored rather than after.
+      const payload = {
+        ...formData,
+        firstName: normalizeText(formData.firstName),
+        lastName: normalizeText(formData.lastName),
+        email: formData.email.trim(),
+        streetAddress: normalizeText(formData.streetAddress),
+        sourceOfWealth: normalizeText(formData.sourceOfWealth),
+        phoneCountryCode,
+        phoneNumber,
+      };
       
       const res = await updateBeneficialOwners.mutateAsync({ companyId, payload });
       const shareholderId = res?.id || res?.shareholderId;
@@ -891,7 +910,7 @@ export default function Step4BeneficialOwners() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Ownership Percentage (%) <span className="text-red-500">*</span></label>
-              <input type="number" name="ownershipPercentage" value={formData.ownershipPercentage || ""} onChange={handleChange} min="0" max="100" className={getInputClassName("ownershipPercentage")} />
+              <input type="text" inputMode="numeric" name="ownershipPercentage" value={formData.ownershipPercentage || ""} onChange={handleChange} maxLength={MAX_PERCENTAGE_LENGTH} placeholder="e.g. 50" className={getInputClassName("ownershipPercentage")} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">BVN <span className="text-red-500">*</span></label>
