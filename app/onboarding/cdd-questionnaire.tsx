@@ -380,11 +380,11 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="flex flex-col gap-8 pb-10 pt-2 px-12 border-l-2 border-border-theme ml-4">
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Do you have any PEP UBO (10% or more)? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Do you have any PEP UBO (10% or more)? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={hasPepUbo} onChange={setHasPepUbo} />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Do you have any PEP board members? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Do you have any PEP board members? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={hasPepDirector} onChange={setHasPepDirector} />
                                 </div>
                                 {(hasPepUbo === 'yes' || hasPepDirector === 'yes') && (
@@ -425,7 +425,7 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="flex flex-col gap-8 pb-10 pt-2 px-12 border-l-2 border-border-theme ml-4">
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Does the entity require Central Bank or SEC approval? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Does the entity require Central Bank or SEC approval? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={requiresCbApproval} onChange={setRequiresCbApproval} />
                                 </div>
                                 {requiresCbApproval === 'yes' && (
@@ -438,7 +438,7 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                                     </div>
                                 )}
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Is the company subject to financial regulation (AML)? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Is the company subject to financial regulation (AML)? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={subjectToAmlReg} onChange={setSubjectToAmlReg} />
                                 </div>
                                 {subjectToAmlReg === 'yes' && (
@@ -451,19 +451,19 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                                     </div>
                                 )}
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Are there any legal claims or convictions (last 5 years)? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Are there any legal claims or convictions (last 5 years)? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={hasLegalClaims} onChange={setHasLegalClaims} />
                                 </div>
                                 {hasLegalClaims === 'yes' && (
                                     <FieldInput placeholder="Provide details (Case, Court, Status) *" value={legalClaimsDetails} onChange={setLegalClaimsDetails} />
                                 )}
                                 <div>
-                                    <p className="text-sm font-medium text-foreground mb-1">Does the company have a written AML policy? *</p>
+                                    <p className="text-sm font-medium text-foreground mb-1">Does the company have a written AML policy? <span className="text-red-500">*</span></p>
                                     <YesNoPills value={hasWrittenAmlPolicy} onChange={setHasWrittenAmlPolicy} />
                                 </div>
                                 <FieldInput placeholder="Name and Address of Auditors *" value={auditorsInfo} onChange={setAuditorsInfo} />
                                 <div>
-                                    <p className="text-[10px] font-bold text-muted-theme uppercase tracking-widest mb-3">Screening Sanction Lists *</p>
+                                    <p className="text-[10px] font-bold text-muted-theme uppercase tracking-widest mb-3">Screening Sanction Lists <span className="text-red-500">*</span></p>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {SANCTION_LISTS.map(sl => (
                                             <button
@@ -507,7 +507,7 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                                                 <div key={i} className="flex flex-col gap-3">
                                                     <div className="flex items-start gap-3">
                                                         <span className="text-xs font-bold text-gray-300 mt-1">Q{i + 1}.</span>
-                                                        <p className="text-sm font-medium text-foreground leading-relaxed">{q.text} *</p>
+                                                        <p className="text-sm font-medium text-foreground leading-relaxed">{q.text} <span className="text-red-500">*</span></p>
                                                     </div>
                                                     <div className="ml-7">
                                                         {q.type === 'yesno' ? (
@@ -550,7 +550,7 @@ export default function CddQuestionnaire({ tradingPartnerId, onNext }: {
                                         <div className="grid grid-cols-2 gap-8 mt-4">
                                             <FieldInput placeholder="Position / Title *" value={position} onChange={setPosition} />
                                             <div className="flex flex-col gap-1.5">
-                                                <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Signature Date *</label>
+                                                <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Signature Date <span className="text-red-500">*</span></label>
                                                 <DatePicker value={date} onChange={setDate} placeholder="Select Date" />
                                             </div>
                                         </div>

@@ -106,7 +106,7 @@ function ContactDeclarationForm({
                     <FieldInput placeholder="Individual / Company Address *" value={decl.individualCompanyAddress} onChange={v => updateDecl('individualCompanyAddress', v)} />
                     
                     <div className="flex flex-col gap-1">
-                        <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Declaration Date *</label>
+                        <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Declaration Date <span className="text-red-500">*</span></label>
                         <DatePicker 
                             value={decl.date} 
                             placeholder="Select Date"

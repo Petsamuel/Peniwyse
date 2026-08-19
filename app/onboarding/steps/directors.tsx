@@ -107,7 +107,7 @@ function DirectorsForm({
                             <FieldInput placeholder="Residential Address *" value={dir.address} onChange={v => update(i, 'address', v)} />
                             
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Date of Birth *</label>
+                                <label className="text-[10px] text-muted-theme uppercase font-bold ml-1">Date of Birth <span className="text-red-500">*</span></label>
                                 <DatePicker 
                                     value={dir.dateOfBirth} 
                                     placeholder="Select Birth Date"

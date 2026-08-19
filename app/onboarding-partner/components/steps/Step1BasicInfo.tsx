@@ -125,7 +125,7 @@ export default function Step1BasicInfo() {
           {/* Legal Business Name */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Legal Business Name <span className="text-accent">*</span>
+              Legal Business Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -153,7 +153,7 @@ export default function Step1BasicInfo() {
           {/* Business Type */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Business Type <span className="text-accent">*</span>
+              Business Type <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -181,7 +181,7 @@ export default function Step1BasicInfo() {
           {/* Country of Incorporation */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Country of Incorporation <span className="text-accent">*</span>
+              Country of Incorporation <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -215,7 +215,7 @@ export default function Step1BasicInfo() {
           {/* Date of Incorporation */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Date of Incorporation <span className="text-accent">*</span>
+              Date of Incorporation <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -230,7 +230,7 @@ export default function Step1BasicInfo() {
           {/* Registration Number */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Registration Number <span className="text-accent">*</span>
+              Registration Number <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -245,7 +245,7 @@ export default function Step1BasicInfo() {
           {/* Tax ID */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold text-slate-600">
-              Tax ID <span className="text-accent">*</span>
+              Tax ID <span className="text-red-500">*</span>
             </label>
             <input
               type="text"

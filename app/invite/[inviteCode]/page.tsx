@@ -12,6 +12,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/hooks/use-toast";
 import { ToastContainer } from "@/app/components/disbursement/container";
+import { getApiErrorMessage } from "@/app/utils/error-message";
 
 export default function InvitePage({
   params,
@@ -47,19 +48,47 @@ export default function InvitePage({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !accountType ||
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !confirmPassword ||
-      !inviteCode
-    )
-      return;
+    if (isValidating || isValidInvite === false || isAlreadyUsed || registerMutation.isPending) return;
 
+    if (!accountType) {
+      showError("Account Type Required", "Please choose an account type to begin.");
+      return;
+    }
+    if (!firstName.trim()) {
+      showError("First Name Required", "Please enter your first name.");
+      return;
+    }
+    if (!lastName.trim()) {
+      showError("Last Name Required", "Please enter your last name.");
+      return;
+    }
+    if (!email.trim()) {
+      showError("Email Address Required", "Please enter your email address.");
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      showError("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+    if (!password) {
+      showError("Password Required", "Please create a password.");
+      return;
+    }
+    if (password.length < 8) {
+      showError("Password Too Short", "Password must be at least 8 characters.");
+      return;
+    }
+    if (!confirmPassword) {
+      showError("Confirm Password", "Please confirm your password.");
+      return;
+    }
     if (password !== confirmPassword) {
-      showError("Passwords do not match", "Please ensure both passwords match.");
+      showError("Passwords Do Not Match", "Please ensure both passwords match.");
+      return;
+    }
+    if (!inviteCode) {
+      showError("Invalid Invite", "Missing invite code.");
       return;
     }
 
@@ -67,17 +96,17 @@ export default function InvitePage({
       {
         inviteCode,
         password,
-        email,
-        firstName,
-        lastName,
+        email: email.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         businessType: accountType,
       },
       {
         onSuccess: () => {
           setShowSuccess(true);
         },
-        onError: (err) => {
-          console.error("Registration failed:", err);
+        onError: (err: unknown) => {
+          showError("Registration Failed", getApiErrorMessage(err));
         },
       },
     );
@@ -213,7 +242,7 @@ export default function InvitePage({
         {/* Account Type */}
         <div className="space-y-2 mt-6">
           <label className="block text-[13px] font-semibold text-foreground">
-            Please choose your account type to begin
+            Please choose your account type to begin <span className="text-red-500">*</span>
           </label>
           <div className="relative custom-dropdown">
             <button
@@ -280,7 +309,7 @@ export default function InvitePage({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="block text-[13px] font-semibold text-foreground">
-              First Name
+              First Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -292,7 +321,7 @@ export default function InvitePage({
           </div>
           <div className="space-y-2">
             <label className="block text-[13px] font-semibold text-foreground">
-              Last Name
+              Last Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -307,7 +336,7 @@ export default function InvitePage({
         {/* Email field */}
         <div className="space-y-2">
           <label className="flex items-center text-[13px] font-semibold text-foreground group w-fit relative cursor-help">
-            Email address
+            Email address <span className="text-red-500 ml-1">*</span>
             <MdInfoOutline
               className="ml-1.5 text-muted-theme group-hover:text-foreground transition-colors"
               size={15}
@@ -329,7 +358,7 @@ export default function InvitePage({
         {/* Password field */}
         <div className="space-y-2">
           <label className="flex items-center text-[13px] font-semibold text-foreground group w-fit relative cursor-help">
-            Password
+            Password <span className="text-red-500 ml-1">*</span>
             <MdInfoOutline
               className="ml-1.5 text-muted-theme group-hover:text-foreground transition-colors"
               size={15}
@@ -383,7 +412,7 @@ export default function InvitePage({
         {/* Confirm Password field */}
         <div className="space-y-2">
           <label className="block text-[13px] font-semibold text-foreground">
-            Confirm Password
+            Confirm Password <span className="text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -420,26 +449,69 @@ export default function InvitePage({
               isValidating ||
               isValidInvite === false ||
               isAlreadyUsed ||
-              registerMutation.isPending ||
-              (password !== confirmPassword)
+              registerMutation.isPending
             }
-            className={`w-full h-12 text-white font-bold rounded-xl transition-colors flex items-center justify-center text-sm ${
-              isValidating ||
-              isValidInvite === false ||
-              isAlreadyUsed ||
-              registerMutation.isPending ||
-              (password !== confirmPassword)
-                ? "bg-slate-400 cursor-not-allowed"
-                : "bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20"
+            className={`w-full h-12 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2.5 text-sm ${
+              isValidating || isValidInvite === false || isAlreadyUsed
+                ? "bg-slate-400 cursor-not-allowed shadow-none"
+                : registerMutation.isPending
+                  ? "bg-accent/85 cursor-wait shadow-lg shadow-accent/20"
+                  : "bg-accent hover:bg-accent/90 shadow-lg shadow-accent/25 active:scale-[0.99]"
             }`}
           >
-            {isValidating
-              ? "Validating invite..."
-              : registerMutation.isPending
-                ? "Creating account..."
-                : isAlreadyUsed
-                  ? "Invite unavailable"
-                  : "Create account"}
+            {registerMutation.isPending ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span>Creating account...</span>
+              </>
+            ) : isValidating ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                <span>Validating invite...</span>
+              </>
+            ) : isAlreadyUsed ? (
+              <span>Invite unavailable</span>
+            ) : (
+              <span>Create account</span>
+            )}
           </button>
         </div>
 

@@ -313,7 +313,7 @@ export default function Step2ContactInfo() {
 
       <div className="space-y-5 flex-1">
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Business Email</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Business Email <span className="text-red-500">*</span></label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MdOutlineEmail className="text-slate-400" />
@@ -330,7 +330,7 @@ export default function Step2ContactInfo() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone Number</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
           <PhoneInput
             international
             limitMaxLength
@@ -345,7 +345,7 @@ export default function Step2ContactInfo() {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Registered Address</label>
+          <label className="block text-sm font-semibold text-slate-700 mb-1.5">Registered Address <span className="text-red-500">*</span></label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <MdOutlineLocationOn className="text-slate-400" />
@@ -363,7 +363,7 @@ export default function Step2ContactInfo() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Country</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Country <span className="text-red-500">*</span></label>
             <div className="relative">
               <Select
                 unstyled
@@ -378,7 +378,7 @@ export default function Step2ContactInfo() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">State/Province</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">State/Province <span className="text-red-500">*</span></label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                 <MdOutlineMap className="text-slate-400" />
@@ -400,7 +400,7 @@ export default function Step2ContactInfo() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">City</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">City <span className="text-red-500">*</span></label>
             <CreatableSelect
               unstyled
               classNames={getSelectClassNames(false, missingFields.includes("city"))}
@@ -415,7 +415,7 @@ export default function Step2ContactInfo() {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Postal Code</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Postal Code <span className="text-red-500">*</span></label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <MdOutlineSignpost className="text-slate-400" />
@@ -468,7 +468,7 @@ export default function Step2ContactInfo() {
             <div className="space-y-5 animate-in slide-in-from-top-2 fade-in duration-300">
               <h3 className="text-sm font-bold text-slate-800 pb-2 border-b border-slate-100">Operating Address</h3>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Street Address</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Street Address <span className="text-red-500">*</span></label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <MdOutlineLocationOn className="text-slate-400" />
@@ -486,7 +486,7 @@ export default function Step2ContactInfo() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Country</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Country <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <Select
                       unstyled
@@ -501,7 +501,7 @@ export default function Step2ContactInfo() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating State/Prov</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating State/Prov <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                       <MdOutlineMap className="text-slate-400" />
@@ -523,7 +523,7 @@ export default function Step2ContactInfo() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating City</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating City <span className="text-red-500">*</span></label>
                   <CreatableSelect
                     unstyled
                     classNames={getSelectClassNames(false, missingFields.includes("operatingCity"))}
@@ -538,7 +538,7 @@ export default function Step2ContactInfo() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Postal Code</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Operating Postal Code <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <MdOutlineSignpost className="text-slate-400" />

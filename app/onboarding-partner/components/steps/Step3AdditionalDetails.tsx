@@ -244,7 +244,7 @@ export default function Step3AdditionalDetails() {
       <div className="space-y-5 flex-1">
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Business Description
+            Business Description <span className="text-red-500">*</span>
           </label>
           <textarea
             name="businessDescription"
@@ -258,10 +258,7 @@ export default function Step3AdditionalDetails() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-0.5">
-            What services would you want to access?{" "}
-            <span className="text-slate-400 font-normal text-xs">
-              (Required)
-            </span>
+            What services would you want to access? <span className="text-red-500">*</span>
           </label>
           <p className="text-xs text-slate-500 mb-2 italic">
             Please select the services you want to access through our platform
@@ -289,10 +286,7 @@ export default function Step3AdditionalDetails() {
         {selectedServices.some((s) => s.value === "Digital Assets") && (
           <div className="animate-in fade-in slide-in-from-top-2">
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              What Digital Assets services would you like to access?{" "}
-              <span className="text-slate-400 font-normal text-xs">
-                (Required)
-              </span>
+              What Digital Assets services would you like to access? <span className="text-red-500">*</span>
             </label>
             <Select
               isMulti
@@ -317,7 +311,7 @@ export default function Step3AdditionalDetails() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Estimated Monthly Volume
+              Estimated Monthly Volume <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -336,7 +330,7 @@ export default function Step3AdditionalDetails() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-              Estimated Annual Revenue
+              Estimated Annual Revenue <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
@@ -357,7 +351,7 @@ export default function Step3AdditionalDetails() {
 
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-            Primary Funding Source
+            Primary Funding Source <span className="text-red-500">*</span>
           </label>
           <select
             value={fundingSourceSelect}
